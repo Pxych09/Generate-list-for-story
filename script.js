@@ -12,7 +12,6 @@
   const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
   // ---- Locked page theme: Midnight Ink ----
-  // Page colors/vars live in CSS :root. No page randomizer. No page picker.
 
   const titleDesigns = [
     { name:"Neon Noir",   font:"'Bebas Neue',sans-serif",    bg:"linear-gradient(135deg,#0f0c29,#302b63,#24243e)", color:"#f0e130", textShadow:"0 0 12px #f0e13088", padding:"16px 20px", letterSpacing:"4px", borderRadius:"4px 4px 0 0" },
@@ -40,6 +39,17 @@
     { name:"Ink Minimal",   wrapBg:"#0b1020", cardBg:"rgba(255,255,255,.04)", rankBg:"#7c3aed", rankColor:"#fff", textColor:"#eef2ff", subColor:"rgba(238,242,255,.72)", borderRadius:"12px", gap:"10px", padding:"12px", boxShadow:"none", outline:"1px solid rgba(255,255,255,.10)" },
   ];
 
+  // Symbols for Wrap BG objects
+  const ORNAMENTS = [
+    { label: "Star", value: "star", char: "★" },
+    { label: "Heart", value: "heart", char: "❤" },
+    { label: "Spade", value: "spade", char: "♠" },
+    { label: "Club", value: "club", char: "♣" },
+    { label: "Circle", value: "circle", char: "●" },
+    { label: "Triangle", value: "triangle", char: "▲" },
+    { label: "Diamond", value: "diamond", char: "◆" },
+  ];
+
   // ---- State ----
   const state = {
     activeTitle: titleDesigns[6],
@@ -52,6 +62,12 @@
       titleText: "#eef2ff",
 
       wrapBg: "#0b1020",
+
+      // ornaments
+      wrapObject: "star",
+      wrapObjectSize: 22,     // px
+      wrapObjectQty: 24,
+      wrapAnimate: false,
 
       cardBgHex: "#ffffff",
       cardBgAlpha: 0.04,
@@ -92,11 +108,11 @@
   function normalizeHex(s){
     const v = String(s || "").trim();
     if (!isValidHex(v)) return null;
-    if (v.length === 4) {
-      return "#" + v.slice(1).split("").map(c => c + c).join("");
-    }
+    if (v.length === 4) return ("#" + v.slice(1).split("").map(c => c + c).join("")).toLowerCase();
     return v.toLowerCase();
   }
+
+  function clamp01(n){ return Math.max(0, Math.min(1, n)); }
 
   function hexToRgb(hex){
     const h = hex.replace("#","");
@@ -109,9 +125,7 @@
     return `rgba(${r},${g},${b},${a})`;
   }
 
-  function clamp01(n){
-    return Math.max(0, Math.min(1, n));
-  }
+  function rand(min, max){ return Math.random() * (max - min) + min; }
 
   // ---- Apply preset styles ----
   function applyTitleStyle(d){
@@ -161,15 +175,77 @@
     });
   }
 
-  // ---- Apply preset + custom overrides ----
+  // ---- Custom derived ----
   function syncCustomDerived(){
     state.custom.cardBgAlpha = clamp01(state.custom.cardBgAlpha);
     state.custom.artistTextAlpha = clamp01(state.custom.artistTextAlpha);
 
     state.custom.cardBg = rgbaFromHex(state.custom.cardBgHex, state.custom.cardBgAlpha);
     state.custom.artistText = rgbaFromHex(state.custom.artistTextHex, state.custom.artistTextAlpha);
+
+    // clamp ornaments
+    state.custom.wrapObjectSize = Math.max(8, Math.min(80, Number(state.custom.wrapObjectSize) || 22));
+    state.custom.wrapObjectQty = Math.max(0, Math.min(250, Number(state.custom.wrapObjectQty) || 0));
   }
 
+  // ---- Ornaments rendering ----
+  function getOrnChar(){
+    return ORNAMENTS.find(o => o.value === state.custom.wrapObject)?.char || "★";
+  }
+
+  function renderOrnaments(){
+    const layer = $("#wrap-ornaments");
+    const wrap  = $("#cards-wrap");
+    if (!layer || !wrap) return;
+
+    layer.innerHTML = "";
+
+    const qty = state.custom.wrapObjectQty;
+    if (!state.customEnabled || qty <= 0) {
+      layer.classList.remove("is-animated");
+      return;
+    }
+
+    const char = getOrnChar();
+    const size = state.custom.wrapObjectSize;
+
+    // color based on current "Rank BG" by default (looks nice)
+    // you can later expose a picker if you want
+    const ornColor = state.custom.rankBg || "#7c3aed";
+
+    const w = wrap.clientWidth || 520;
+    const h = wrap.clientHeight || 300;
+
+    for (let i = 0; i < qty; i++){
+      const s = document.createElement("span");
+      s.className = "orn";
+      s.textContent = char;
+
+      const x = rand(-10, w + 10);
+      const y = rand(-10, h + 10);
+      const rot = rand(-25, 25);
+      const dx = rand(-16, 16);
+      const dy = rand(-18, 18);
+      const speed = rand(4.5, 8.5);
+
+      s.style.left = `${x}px`;
+      s.style.top  = `${y}px`;
+      s.style.fontSize = `${size}px`;
+      s.style.color = ornColor;
+      s.style.opacity = String(rand(0.10, 0.22));
+
+      s.style.setProperty("--orn-rot", `${rot}deg`);
+      s.style.setProperty("--orn-dx", `${dx}px`);
+      s.style.setProperty("--orn-dy", `${dy}px`);
+      s.style.setProperty("--orn-speed", `${speed}s`);
+
+      layer.appendChild(s);
+    }
+
+    layer.classList.toggle("is-animated", !!state.custom.wrapAnimate);
+  }
+
+  // ---- Apply preset + custom overrides ----
   function applyTitleWithOverrides(){
     applyTitleStyle(state.activeTitle);
 
@@ -187,26 +263,28 @@
   function applyBodyWithOverrides(){
     applyBodyStyle(state.activeBody);
 
-    if (!state.customEnabled) return;
-
     const wrap = $("#cards-wrap");
     if (!wrap) return;
 
-    wrap.style.background = state.custom.wrapBg;
+    if (state.customEnabled) {
+      wrap.style.background = state.custom.wrapBg;
 
-    wrap.querySelectorAll(".song-card").forEach(card => {
-      card.style.background = state.custom.cardBg;
+      wrap.querySelectorAll(".song-card").forEach(card => {
+        card.style.background = state.custom.cardBg;
 
-      const rank = $(".rank-badge", card);
-      if (rank){
-        rank.style.background = state.custom.rankBg;
-        rank.style.color = state.custom.rankText;
-      }
+        const rank = $(".rank-badge", card);
+        if (rank){
+          rank.style.background = state.custom.rankBg;
+          rank.style.color = state.custom.rankText;
+        }
 
-      const inputs = card.querySelectorAll("input");
-      if (inputs[0]) inputs[0].style.color = state.custom.songText;
-      if (inputs[1]) inputs[1].style.color = state.custom.artistText;
-    });
+        const inputs = card.querySelectorAll("input");
+        if (inputs[0]) inputs[0].style.color = state.custom.songText;
+        if (inputs[1]) inputs[1].style.color = state.custom.artistText;
+      });
+    }
+
+    renderOrnaments();
   }
 
   function refreshTitle(){
@@ -215,7 +293,7 @@
     el.textContent = elDesiredTitle.value || (state.currentN ? `My Top ${state.currentN} Fave!` : "My Playlist");
   }
 
-  // ---- Custom control binding helper (picker + hex) ----
+  // ---- Custom color binding (picker + hex) ----
   function bindHexColor(pickerId, hexId, getVal, setVal, onApply){
     const picker = $(pickerId);
     const hexIn  = $(hexId);
@@ -227,7 +305,6 @@
       hexIn.value = v;
     };
 
-    // picker -> hex
     picker.addEventListener("input", () => {
       const v = normalizeHex(picker.value) || "#000000";
       setVal(v);
@@ -235,7 +312,6 @@
       onApply();
     });
 
-    // hex typing -> picker (only apply when valid)
     const onHexChange = () => {
       const v = normalizeHex(hexIn.value);
       if (!v) {
@@ -255,10 +331,75 @@
     syncUI();
   }
 
+  // ---- UI builders ----
+  function colorControl(label, key){
+    return `
+      <div class="ctrl">
+        <div class="ctrl-head">
+          <label>${escapeHTML(label)}</label>
+        </div>
+        <div class="ctrl-inputs">
+          <input type="color" id="${key}_picker" />
+          <input class="hex-input" id="${key}_hex" type="text" value="#000000" placeholder="#rrggbb" spellcheck="false" />
+        </div>
+      </div>
+    `;
+  }
+
+  function rangeControl(label, key, min, max, value){
+    return `
+      <div class="ctrl">
+        <div class="ctrl-head">
+          <label>${escapeHTML(label)}</label>
+        </div>
+        <input class="range" id="${key}_range" type="range" min="${min}" max="${max}" value="${value}">
+      </div>
+    `;
+  }
+
+  function wrapObjectsControl(){
+    const options = ORNAMENTS.map(o => `<option value="${o.value}">${escapeHTML(o.label)}</option>`).join("");
+    return `
+      <div class="ctrl">
+        <div class="ctrl-head">
+          <label>Wrap BG Objects</label>
+        </div>
+        <div class="ctrl-inputs">
+          <select class="theme-select" id="wrapObjSelect">${options}</select>
+        </div>
+      </div>
+
+      <div class="ctrl">
+        <div class="ctrl-head">
+          <label>Object Size</label>
+        </div>
+        <input class="range" id="wrapObjSize" type="range" min="8" max="80" value="22">
+      </div>
+
+      <div class="ctrl">
+        <div class="ctrl-head">
+          <label>Quantity</label>
+        </div>
+        <div class="ctrl-inputs">
+          <input class="num-input" id="wrapObjQty" type="number" min="0" max="250" value="24" />
+        </div>
+      </div>
+
+      <div class="ctrl">
+        <div class="ctrl-head">
+          <label>Animate</label>
+        </div>
+        <button class="small-btn" id="wrapObjAnimBtn" type="button">OFF</button>
+      </div>
+    `;
+  }
+
   // ---- Template ----
   function generateTemplate(n){
     state.currentN = n;
     const title = elDesiredTitle.value || `My Top ${n} Fave!`;
+
+    syncCustomDerived();
 
     let html = `
       <div class="settings-panel">
@@ -275,19 +416,21 @@
           <select id="bodyThemeSelect" class="theme-select theme-select-inline"></select>
           <button class="gen-btn" id="btn-random-body" type="button">🎲</button>
         </div>
-        <hr />
-        <div class="ctrl-row justify-content-end">
+
+        <div class="ctrl-row">
           <label class="toggle">
             <input type="checkbox" id="customEnabled">
             Enable Custom Colors
           </label>
-          <button class="btn-ghost w-100" id="btn-reset-custom" type="button">Reset Custom</button>
+          <button class="btn-ghost" id="btn-reset-custom" type="button">Reset Custom</button>
         </div>
 
         <div class="settings-grid" id="custom-grid">
           ${colorControl("Title BG", "c_titleBg")}
           ${colorControl("Title Text", "c_titleText")}
           ${colorControl("Wrap BG", "c_wrapBg")}
+
+          ${wrapObjectsControl()}
 
           ${colorControl("Card BG", "c_cardBg")}
           ${rangeControl("Card BG Opacity", "c_cardAlpha", 0, 100, Math.round(state.custom.cardBgAlpha * 100))}
@@ -303,6 +446,7 @@
       </div>
 
       <div id="cards-wrap">
+        <div id="wrap-ornaments" aria-hidden="true"></div>
         <div id="title-block"><h5>${escapeHTML(title)}</h5></div>
     `;
 
@@ -378,9 +522,7 @@
       applyBodyWithOverrides();
     });
 
-    // ---- Bind color controls (picker + hex) ----
-    syncCustomDerived();
-
+    // ---- Bind custom colors ----
     bindHexColor("#c_titleBg_picker", "#c_titleBg_hex",
       () => state.custom.titleBg,
       (v) => state.custom.titleBg = v,
@@ -399,7 +541,6 @@
       () => applyBodyWithOverrides()
     );
 
-    // Card BG uses hex + alpha
     bindHexColor("#c_cardBg_picker", "#c_cardBg_hex",
       () => state.custom.cardBgHex,
       (v) => { state.custom.cardBgHex = v; syncCustomDerived(); },
@@ -424,7 +565,6 @@
       () => applyBodyWithOverrides()
     );
 
-    // Artist uses hex + alpha
     bindHexColor("#c_artistText_picker", "#c_artistText_hex",
       () => state.custom.artistTextHex,
       (v) => { state.custom.artistTextHex = v; syncCustomDerived(); },
@@ -452,6 +592,53 @@
       });
     }
 
+    // ---- Wrap BG Objects controls ----
+    const elObjSelect = $("#wrapObjSelect");
+    const elObjSize   = $("#wrapObjSize");
+    const elObjQty    = $("#wrapObjQty");
+    const elAnimBtn   = $("#wrapObjAnimBtn");
+
+    if (elObjSelect){
+      elObjSelect.value = state.custom.wrapObject;
+      elObjSelect.addEventListener("change", () => {
+        state.custom.wrapObject = elObjSelect.value;
+        applyBodyWithOverrides();
+      });
+    }
+
+    if (elObjSize){
+      elObjSize.value = String(state.custom.wrapObjectSize);
+      elObjSize.addEventListener("input", () => {
+        state.custom.wrapObjectSize = Number(elObjSize.value);
+        syncCustomDerived();
+        applyBodyWithOverrides();
+      });
+    }
+
+    if (elObjQty){
+      elObjQty.value = String(state.custom.wrapObjectQty);
+      elObjQty.addEventListener("input", () => {
+        state.custom.wrapObjectQty = Number(elObjQty.value);
+        syncCustomDerived();
+        applyBodyWithOverrides();
+      });
+    }
+
+    const syncAnimBtn = () => {
+      if (!elAnimBtn) return;
+      elAnimBtn.textContent = state.custom.wrapAnimate ? "ON" : "OFF";
+      elAnimBtn.classList.toggle("is-on", !!state.custom.wrapAnimate);
+    };
+
+    if (elAnimBtn){
+      syncAnimBtn();
+      elAnimBtn.addEventListener("click", () => {
+        state.custom.wrapAnimate = !state.custom.wrapAnimate;
+        syncAnimBtn();
+        applyBodyWithOverrides();
+      });
+    }
+
     // reset
     btnResetCustom.addEventListener("click", () => {
       state.customEnabled = false;
@@ -461,6 +648,12 @@
         titleBg: "#0b1020",
         titleText: "#eef2ff",
         wrapBg: "#0b1020",
+
+        wrapObject: "star",
+        wrapObjectSize: 22,
+        wrapObjectQty: 24,
+        wrapAnimate: false,
+
         cardBgHex: "#ffffff",
         cardBgAlpha: 0.04,
         cardBg: "rgba(255,255,255,.04)",
@@ -475,29 +668,8 @@
       syncCustomDerived();
       syncCustomGridVisibility();
 
-      // re-sync controls quickly by re-rendering template state (simplest)
       applyTitleWithOverrides();
       applyBodyWithOverrides();
-
-      // update UI fields to reflect reset values
-      const syncOne = (prefix, val) => {
-        const p = $(`#${prefix}_picker`);
-        const h = $(`#${prefix}_hex`);
-        if (p) p.value = val;
-        if (h) h.value = val;
-      };
-
-      syncOne("c_titleBg", state.custom.titleBg);
-      syncOne("c_titleText", state.custom.titleText);
-      syncOne("c_wrapBg", state.custom.wrapBg);
-      syncOne("c_cardBg", state.custom.cardBgHex);
-      syncOne("c_rankBg", state.custom.rankBg);
-      syncOne("c_rankText", state.custom.rankText);
-      syncOne("c_songText", state.custom.songText);
-      syncOne("c_artistText", state.custom.artistTextHex);
-
-      if (elCardAlpha) elCardAlpha.value = String(Math.round(state.custom.cardBgAlpha * 100));
-      if (elArtistAlpha) elArtistAlpha.value = String(Math.round(state.custom.artistTextAlpha * 100));
     });
 
     // Apply initial styles
@@ -505,33 +677,6 @@
     applyBodyWithOverrides();
 
     elDownloadWrap.style.display = "flex";
-  }
-
-  // UI builders
-  function colorControl(label, key){
-    // key like "c_titleBg"
-    return `
-      <div class="ctrl">
-        <div class="ctrl-head">
-          <label>${escapeHTML(label)}</label>
-        </div>
-        <div class="ctrl-inputs">
-          <input type="color" id="${key}_picker" />
-          <input class="hex-input" id="${key}_hex" type="text" value="#000000" placeholder="#rrggbb" spellcheck="false" />
-        </div>
-      </div>
-    `;
-  }
-
-  function rangeControl(label, key, min, max, value){
-    return `
-      <div class="ctrl">
-        <div class="ctrl-head">
-          <label>${escapeHTML(label)}</label>
-        </div>
-        <input class="range" id="${key}_range" type="range" min="${min}" max="${max}" value="${value}">
-      </div>
-    `;
   }
 
   // ---- Download (PNG/JPG) ----
