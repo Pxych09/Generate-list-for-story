@@ -52,15 +52,17 @@
       titleText: "#eef2ff",
 
       wrapBg: "#0b1020",
-      cardBgHex: "#ffffff",         // used for picker only
-      cardBgAlpha: 0.04,            // 0..1
+
+      cardBgHex: "#ffffff",
+      cardBgAlpha: 0.04,
       cardBg: "rgba(255,255,255,.04)",
 
       rankBg: "#7c3aed",
       rankText: "#ffffff",
 
       songText: "#eef2ff",
-      artistTextHex: "#eef2ff",     // used for picker
+
+      artistTextHex: "#eef2ff",
       artistTextAlpha: 0.72,
       artistText: "rgba(238,242,255,.72)",
     }
@@ -82,16 +84,33 @@
       .join("");
   }
 
+  function isValidHex(s){
+    const v = String(s || "").trim();
+    return /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(v);
+  }
+
+  function normalizeHex(s){
+    const v = String(s || "").trim();
+    if (!isValidHex(v)) return null;
+    if (v.length === 4) {
+      return "#" + v.slice(1).split("").map(c => c + c).join("");
+    }
+    return v.toLowerCase();
+  }
+
   function hexToRgb(hex){
     const h = hex.replace("#","");
-    const full = h.length === 3 ? h.split("").map(c=>c+c).join("") : h;
-    const n = parseInt(full, 16);
+    const n = parseInt(h, 16);
     return { r:(n>>16)&255, g:(n>>8)&255, b:n&255 };
   }
 
   function rgbaFromHex(hex, a){
     const {r,g,b} = hexToRgb(hex);
     return `rgba(${r},${g},${b},${a})`;
+  }
+
+  function clamp01(n){
+    return Math.max(0, Math.min(1, n));
   }
 
   // ---- Apply preset styles ----
@@ -143,6 +162,14 @@
   }
 
   // ---- Apply preset + custom overrides ----
+  function syncCustomDerived(){
+    state.custom.cardBgAlpha = clamp01(state.custom.cardBgAlpha);
+    state.custom.artistTextAlpha = clamp01(state.custom.artistTextAlpha);
+
+    state.custom.cardBg = rgbaFromHex(state.custom.cardBgHex, state.custom.cardBgAlpha);
+    state.custom.artistText = rgbaFromHex(state.custom.artistTextHex, state.custom.artistTextAlpha);
+  }
+
   function applyTitleWithOverrides(){
     applyTitleStyle(state.activeTitle);
 
@@ -188,9 +215,48 @@
     el.textContent = elDesiredTitle.value || (state.currentN ? `My Top ${state.currentN} Fave!` : "My Playlist");
   }
 
+  // ---- Custom control binding helper (picker + hex) ----
+  function bindHexColor(pickerId, hexId, getVal, setVal, onApply){
+    const picker = $(pickerId);
+    const hexIn  = $(hexId);
+    if (!picker || !hexIn) return;
+
+    const syncUI = () => {
+      const v = getVal();
+      picker.value = v;
+      hexIn.value = v;
+    };
+
+    // picker -> hex
+    picker.addEventListener("input", () => {
+      const v = normalizeHex(picker.value) || "#000000";
+      setVal(v);
+      hexIn.value = v;
+      onApply();
+    });
+
+    // hex typing -> picker (only apply when valid)
+    const onHexChange = () => {
+      const v = normalizeHex(hexIn.value);
+      if (!v) {
+        hexIn.style.borderColor = "rgba(255,80,120,.55)";
+        return;
+      }
+      hexIn.style.borderColor = "";
+      setVal(v);
+      picker.value = v;
+      hexIn.value = v;
+      onApply();
+    };
+
+    hexIn.addEventListener("input", onHexChange);
+    hexIn.addEventListener("change", onHexChange);
+
+    syncUI();
+  }
+
   // ---- Template ----
   function generateTemplate(n){
-    
     state.currentN = n;
     const title = elDesiredTitle.value || `My Top ${n} Fave!`;
 
@@ -219,54 +285,20 @@
         </div>
 
         <div class="settings-grid" id="custom-grid">
-          <div class="ctrl">
-            <label>Title BG</label>
-            <input type="color" id="c_titleBg">
-          </div>
-          <div class="ctrl">
-            <label>Title Text</label>
-            <input type="color" id="c_titleText">
-          </div>
+          ${colorControl("Title BG", "c_titleBg")}
+          ${colorControl("Title Text", "c_titleText")}
+          ${colorControl("Wrap BG", "c_wrapBg")}
 
-          <div class="ctrl">
-            <label>Wrap BG</label>
-            <input type="color" id="c_wrapBg">
-          </div>
+          ${colorControl("Card BG", "c_cardBg")}
+          ${rangeControl("Card BG Opacity", "c_cardAlpha", 0, 100, Math.round(state.custom.cardBgAlpha * 100))}
 
-          <div class="ctrl">
-            <label>Card BG</label>
-            <input type="color" id="c_cardBg">
-          </div>
+          ${colorControl("Rank BG", "c_rankBg")}
+          ${colorControl("Rank Text", "c_rankText")}
 
-          <div class="ctrl">
-            <label>Card BG Opacity</label>
-            <input type="range" id="c_cardAlpha" min="0" max="100" value="4">
-          </div>
+          ${colorControl("Song Text", "c_songText")}
 
-          <div class="ctrl">
-            <label>Rank BG</label>
-            <input type="color" id="c_rankBg">
-          </div>
-
-          <div class="ctrl">
-            <label>Rank Text</label>
-            <input type="color" id="c_rankText">
-          </div>
-
-          <div class="ctrl">
-            <label>Song Text</label>
-            <input type="color" id="c_songText">
-          </div>
-
-          <div class="ctrl">
-            <label>Artist Text</label>
-            <input type="color" id="c_artistText">
-          </div>
-
-          <div class="ctrl">
-            <label>Artist Opacity</label>
-            <input type="range" id="c_artistAlpha" min="0" max="100" value="72">
-          </div>
+          ${colorControl("Artist Text", "c_artistText")}
+          ${rangeControl("Artist Opacity", "c_artistAlpha", 0, 100, Math.round(state.custom.artistTextAlpha * 100))}
         </div>
       </div>
 
@@ -325,131 +357,105 @@
       applyBodyWithOverrides();
     });
 
-    // ---- Bind custom color controls ----
+    // ---- Toggle custom grid ----
     const elCustomEnabled = $("#customEnabled");
     const btnResetCustom  = $("#btn-reset-custom");
+    const elCustomGrid    = $("#custom-grid");
 
-    const elCustomGrid = $("#custom-grid");
     function syncCustomGridVisibility(){
-    if (!elCustomGrid) return;
-    elCustomGrid.classList.toggle("is-visible", !!state.customEnabled);
+      if (!elCustomGrid) return;
+      elCustomGrid.classList.toggle("is-visible", !!state.customEnabled);
     }
 
-    const syncCustomDerived = () => {
-      // card bg from hex + alpha slider
-      state.custom.cardBg = rgbaFromHex(state.custom.cardBgHex, state.custom.cardBgAlpha);
-
-      // artist text from hex + alpha slider
-      state.custom.artistText = rgbaFromHex(state.custom.artistTextHex, state.custom.artistTextAlpha);
-    };
-
-    const setPicker = (id, value) => {
-      const el = $(id);
-      if (el) el.value = value;
-    };
-
-    const setRange = (id, value) => {
-      const el = $(id);
-      if (el) el.value = String(value);
-    };
-
-    // init UI from state
     elCustomEnabled.checked = state.customEnabled;
     syncCustomGridVisibility();
-
-    setPicker("#c_titleBg", state.custom.titleBg);
-    setPicker("#c_titleText", state.custom.titleText);
-    setPicker("#c_wrapBg", state.custom.wrapBg);
-
-    setPicker("#c_cardBg", state.custom.cardBgHex);
-    setRange("#c_cardAlpha", Math.round(state.custom.cardBgAlpha * 100));
-
-    setPicker("#c_rankBg", state.custom.rankBg);
-    setPicker("#c_rankText", state.custom.rankText);
-
-    setPicker("#c_songText", state.custom.songText);
-
-    setPicker("#c_artistText", state.custom.artistTextHex);
-    setRange("#c_artistAlpha", Math.round(state.custom.artistTextAlpha * 100));
-
-    syncCustomDerived();
 
     elCustomEnabled.addEventListener("change", () => {
       state.customEnabled = elCustomEnabled.checked;
       syncCustomGridVisibility();
+      syncCustomDerived();
       applyTitleWithOverrides();
       applyBodyWithOverrides();
     });
 
-    const onColor = (id, cb) => {
-      const el = $(id);
-      if (!el) return;
-      el.addEventListener("input", cb);
-    };
-    const onRange = (id, cb) => {
-      const el = $(id);
-      if (!el) return;
-      el.addEventListener("input", cb);
-    };
+    // ---- Bind color controls (picker + hex) ----
+    syncCustomDerived();
 
-    onColor("#c_titleBg", () => {
-      state.custom.titleBg = $("#c_titleBg").value;
-      applyTitleWithOverrides();
-    });
+    bindHexColor("#c_titleBg_picker", "#c_titleBg_hex",
+      () => state.custom.titleBg,
+      (v) => state.custom.titleBg = v,
+      () => applyTitleWithOverrides()
+    );
 
-    onColor("#c_titleText", () => {
-      state.custom.titleText = $("#c_titleText").value;
-      applyTitleWithOverrides();
-    });
+    bindHexColor("#c_titleText_picker", "#c_titleText_hex",
+      () => state.custom.titleText,
+      (v) => state.custom.titleText = v,
+      () => applyTitleWithOverrides()
+    );
 
-    onColor("#c_wrapBg", () => {
-      state.custom.wrapBg = $("#c_wrapBg").value;
-      applyBodyWithOverrides();
-    });
+    bindHexColor("#c_wrapBg_picker", "#c_wrapBg_hex",
+      () => state.custom.wrapBg,
+      (v) => state.custom.wrapBg = v,
+      () => applyBodyWithOverrides()
+    );
 
-    onColor("#c_cardBg", () => {
-      state.custom.cardBgHex = $("#c_cardBg").value;
-      syncCustomDerived();
-      applyBodyWithOverrides();
-    });
+    // Card BG uses hex + alpha
+    bindHexColor("#c_cardBg_picker", "#c_cardBg_hex",
+      () => state.custom.cardBgHex,
+      (v) => { state.custom.cardBgHex = v; syncCustomDerived(); },
+      () => applyBodyWithOverrides()
+    );
 
-    onRange("#c_cardAlpha", () => {
-      state.custom.cardBgAlpha = Number($("#c_cardAlpha").value) / 100;
-      syncCustomDerived();
-      applyBodyWithOverrides();
-    });
+    bindHexColor("#c_rankBg_picker", "#c_rankBg_hex",
+      () => state.custom.rankBg,
+      (v) => state.custom.rankBg = v,
+      () => applyBodyWithOverrides()
+    );
 
-    onColor("#c_rankBg", () => {
-      state.custom.rankBg = $("#c_rankBg").value;
-      applyBodyWithOverrides();
-    });
+    bindHexColor("#c_rankText_picker", "#c_rankText_hex",
+      () => state.custom.rankText,
+      (v) => state.custom.rankText = v,
+      () => applyBodyWithOverrides()
+    );
 
-    onColor("#c_rankText", () => {
-      state.custom.rankText = $("#c_rankText").value;
-      applyBodyWithOverrides();
-    });
+    bindHexColor("#c_songText_picker", "#c_songText_hex",
+      () => state.custom.songText,
+      (v) => state.custom.songText = v,
+      () => applyBodyWithOverrides()
+    );
 
-    onColor("#c_songText", () => {
-      state.custom.songText = $("#c_songText").value;
-      applyBodyWithOverrides();
-    });
+    // Artist uses hex + alpha
+    bindHexColor("#c_artistText_picker", "#c_artistText_hex",
+      () => state.custom.artistTextHex,
+      (v) => { state.custom.artistTextHex = v; syncCustomDerived(); },
+      () => applyBodyWithOverrides()
+    );
 
-    onColor("#c_artistText", () => {
-      state.custom.artistTextHex = $("#c_artistText").value;
-      syncCustomDerived();
-      applyBodyWithOverrides();
-    });
+    // ranges
+    const elCardAlpha = $("#c_cardAlpha_range");
+    if (elCardAlpha){
+      elCardAlpha.value = String(Math.round(state.custom.cardBgAlpha * 100));
+      elCardAlpha.addEventListener("input", () => {
+        state.custom.cardBgAlpha = Number(elCardAlpha.value) / 100;
+        syncCustomDerived();
+        applyBodyWithOverrides();
+      });
+    }
 
-    onRange("#c_artistAlpha", () => {
-      state.custom.artistTextAlpha = Number($("#c_artistAlpha").value) / 100;
-      syncCustomDerived();
-      applyBodyWithOverrides();
-    });
+    const elArtistAlpha = $("#c_artistAlpha_range");
+    if (elArtistAlpha){
+      elArtistAlpha.value = String(Math.round(state.custom.artistTextAlpha * 100));
+      elArtistAlpha.addEventListener("input", () => {
+        state.custom.artistTextAlpha = Number(elArtistAlpha.value) / 100;
+        syncCustomDerived();
+        applyBodyWithOverrides();
+      });
+    }
 
+    // reset
     btnResetCustom.addEventListener("click", () => {
       state.customEnabled = false;
       elCustomEnabled.checked = false;
-      syncCustomGridVisibility();
 
       state.custom = {
         titleBg: "#0b1020",
@@ -466,23 +472,32 @@
         artistText: "rgba(238,242,255,.72)",
       };
 
-      setPicker("#c_titleBg", state.custom.titleBg);
-      setPicker("#c_titleText", state.custom.titleText);
-      setPicker("#c_wrapBg", state.custom.wrapBg);
+      syncCustomDerived();
+      syncCustomGridVisibility();
 
-      setPicker("#c_cardBg", state.custom.cardBgHex);
-      setRange("#c_cardAlpha", Math.round(state.custom.cardBgAlpha * 100));
-
-      setPicker("#c_rankBg", state.custom.rankBg);
-      setPicker("#c_rankText", state.custom.rankText);
-
-      setPicker("#c_songText", state.custom.songText);
-
-      setPicker("#c_artistText", state.custom.artistTextHex);
-      setRange("#c_artistAlpha", Math.round(state.custom.artistTextAlpha * 100));
-
+      // re-sync controls quickly by re-rendering template state (simplest)
       applyTitleWithOverrides();
       applyBodyWithOverrides();
+
+      // update UI fields to reflect reset values
+      const syncOne = (prefix, val) => {
+        const p = $(`#${prefix}_picker`);
+        const h = $(`#${prefix}_hex`);
+        if (p) p.value = val;
+        if (h) h.value = val;
+      };
+
+      syncOne("c_titleBg", state.custom.titleBg);
+      syncOne("c_titleText", state.custom.titleText);
+      syncOne("c_wrapBg", state.custom.wrapBg);
+      syncOne("c_cardBg", state.custom.cardBgHex);
+      syncOne("c_rankBg", state.custom.rankBg);
+      syncOne("c_rankText", state.custom.rankText);
+      syncOne("c_songText", state.custom.songText);
+      syncOne("c_artistText", state.custom.artistTextHex);
+
+      if (elCardAlpha) elCardAlpha.value = String(Math.round(state.custom.cardBgAlpha * 100));
+      if (elArtistAlpha) elArtistAlpha.value = String(Math.round(state.custom.artistTextAlpha * 100));
     });
 
     // Apply initial styles
@@ -490,6 +505,33 @@
     applyBodyWithOverrides();
 
     elDownloadWrap.style.display = "flex";
+  }
+
+  // UI builders
+  function colorControl(label, key){
+    // key like "c_titleBg"
+    return `
+      <div class="ctrl">
+        <div class="ctrl-head">
+          <label>${escapeHTML(label)}</label>
+        </div>
+        <div class="ctrl-inputs">
+          <input type="color" id="${key}_picker" />
+          <input class="hex-input" id="${key}_hex" type="text" value="#000000" placeholder="#rrggbb" spellcheck="false" />
+        </div>
+      </div>
+    `;
+  }
+
+  function rangeControl(label, key, min, max, value){
+    return `
+      <div class="ctrl">
+        <div class="ctrl-head">
+          <label>${escapeHTML(label)}</label>
+        </div>
+        <input class="range" id="${key}_range" type="range" min="${min}" max="${max}" value="${value}">
+      </div>
+    `;
   }
 
   // ---- Download (PNG/JPG) ----
@@ -530,7 +572,6 @@
       const cs = window.getComputedStyle(inp);
       copyRelevantTextStyles(span, cs);
 
-      // Theme-safe fallback
       const isArtist = inp.classList.contains("fsz-sm");
       span.style.color = isArtist ? (cs.color || "var(--text-secondary)") : (cs.color || "var(--text-primary)");
 
@@ -540,8 +581,6 @@
     });
 
     try{
-      // For JPG: use solid background = Midnight Ink (or your custom wrap/page)
-      // Since body background is a solid color, this is safe.
       const bodyBG = window.getComputedStyle(document.body).backgroundColor || "#0b1020";
 
       const canvas = await html2canvas(target, {
