@@ -251,8 +251,11 @@ body{
 }
 .toggle input{ accent-color: var(--accent); }
 
+/* Hide custom controls until enabled */
+#custom-grid{ display: none; }
+#custom-grid.is-visible{ display: grid; }
+
 .settings-grid{
-  display:grid;
   grid-template-columns: 1fr 1fr;
   gap:10px 10px;
   margin-top:10px;
@@ -263,20 +266,34 @@ body{
 
 .ctrl{
   display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
+  flex-direction:column;
+  gap:6px;
   background: rgba(255,255,255,.04);
   border: 1px solid rgba(255,255,255,.10);
   border-radius: 12px;
-  padding: 8px 10px;
+  padding: 10px 10px;
 }
+
+.ctrl .ctrl-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+
 .ctrl label{
   font-size:.75rem;
   color: var(--text-secondary);
   font-weight:800;
   letter-spacing:.2px;
 }
+
+.ctrl .ctrl-inputs{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
 .ctrl input[type="color"]{
   width: 44px;
   height: 28px;
@@ -284,6 +301,25 @@ body{
   border:none;
   background: transparent;
   cursor:pointer;
+}
+
+.hex-input{
+  flex:1;
+  background: var(--input-bg);
+  border: var(--input-border);
+  border-radius: 10px;
+  padding: 7px 10px;
+  font-size: .78rem;
+  color: var(--text-primary);
+  outline:none;
+}
+.hex-input:focus{
+  border-color: var(--accent);
+  box-shadow: var(--input-focus-ring);
+}
+
+.range{
+  width: 100%;
 }
 
 #title-block h5{ margin:0; }
@@ -323,14 +359,6 @@ body{
 .song-card .song-info input:focus{
   background: rgba(255,255,255,.06);
   border-radius: 6px;
-}
-
-/* Hide custom controls until enabled */
-#custom-grid{
-  display: none;
-}
-#custom-grid.is-visible{
-  display: grid;
 }
 
 /* Used for download replacement spans */
