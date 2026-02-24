@@ -322,6 +322,38 @@ body{
   width: 100%;
 }
 
+.num-input{
+  flex:1;
+  background: var(--input-bg);
+  border: var(--input-border);
+  border-radius: 10px;
+  padding: 7px 10px;
+  font-size: .78rem;
+  color: var(--text-primary);
+  outline:none;
+}
+.num-input:focus{
+  border-color: var(--accent);
+  box-shadow: var(--input-focus-ring);
+}
+
+.small-btn{
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.12);
+  color: var(--text-primary);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: .78rem;
+  font-weight: 800;
+  cursor:pointer;
+  transition: transform .1s, border-color .2s, background .2s;
+}
+.small-btn:hover{ border-color: rgba(255,255,255,.22); transform: translateY(-1px); }
+.small-btn.is-on{
+  background: rgba(124,58,237,.18);
+  border-color: rgba(124,58,237,.45);
+}
+
 #title-block h5{ margin:0; }
 
 .song-card{
@@ -359,6 +391,45 @@ body{
 .song-card .song-info input:focus{
   background: rgba(255,255,255,.06);
   border-radius: 6px;
+}
+
+/* ---- Wrap ornaments layer ---- */
+#cards-wrap{
+  position: relative; /* needed for ornaments absolute positioning */
+  overflow: hidden;
+}
+
+#wrap-ornaments{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  z-index: 0;
+  overflow:hidden;
+  border-radius: inherit;
+}
+
+#wrap-ornaments .orn{
+  position:absolute;
+  opacity: .18;
+  filter: drop-shadow(0 6px 16px rgba(0,0,0,.22));
+  user-select:none;
+  will-change: transform;
+}
+
+#wrap-ornaments.is-animated .orn{
+  animation: floaty var(--orn-speed, 6s) ease-in-out infinite;
+}
+
+@keyframes floaty{
+  0%   { transform: translate3d(0,0,0) rotate(var(--orn-rot,0deg)); }
+  50%  { transform: translate3d(var(--orn-dx,10px), var(--orn-dy,-12px), 0) rotate(calc(var(--orn-rot,0deg) + 10deg)); }
+  100% { transform: translate3d(0,0,0) rotate(var(--orn-rot,0deg)); }
+}
+
+/* Ensure actual content is above ornaments */
+#title-block, .song-card{
+  position: relative;
+  z-index: 1;
 }
 
 /* Used for download replacement spans */
