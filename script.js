@@ -10,9 +10,9 @@
 
   const $ = (sel, root = document) => root.querySelector(sel);
   const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  const rand = (min, max) => Math.random() * (max - min) + min;
 
-  // ---- Locked page theme: Midnight Ink ----
-
+  // ---- Presets ----
   const titleDesigns = [
     { name:"Neon Noir",   font:"'Bebas Neue',sans-serif",    bg:"linear-gradient(135deg,#0f0c29,#302b63,#24243e)", color:"#f0e130", textShadow:"0 0 12px #f0e13088", padding:"16px 20px", letterSpacing:"4px", borderRadius:"4px 4px 0 0" },
     { name:"Pastel Pop",  font:"'Syne',sans-serif",          bg:"linear-gradient(90deg,#ffecd2,#fcb69f)",          color:"#4a0e0e", textShadow:"none",              padding:"14px 18px", letterSpacing:"1px", borderRadius:"12px 12px 0 0" },
@@ -39,7 +39,6 @@
     { name:"Ink Minimal",   wrapBg:"#0b1020", cardBg:"rgba(255,255,255,.04)", rankBg:"#7c3aed", rankColor:"#fff", textColor:"#eef2ff", subColor:"rgba(238,242,255,.72)", borderRadius:"12px", gap:"10px", padding:"12px", boxShadow:"none", outline:"1px solid rgba(255,255,255,.10)" },
   ];
 
-  // Symbols for Wrap BG objects
   const ORNAMENTS = [
     { label: "Star", value: "star", char: "★" },
     { label: "Heart", value: "heart", char: "❤" },
@@ -59,14 +58,18 @@
     customEnabled: false,
     custom: {
       titleBg: "#0b1020",
+      titleBgTransparent: false, // NEW
       titleText: "#eef2ff",
+      titleFont: "",
+      titleAlign: "left",
 
       wrapBg: "#0b1020",
 
-      // ornaments
       wrapObject: "star",
-      wrapObjectSize: 22,     // px
+      wrapObjectSize: 22,
       wrapObjectQty: 24,
+      wrapObjectDistance: 24,
+      wrapGlow: false,
       wrapAnimate: false,
 
       cardBgHex: "#ffffff",
@@ -125,7 +128,74 @@
     return `rgba(${r},${g},${b},${a})`;
   }
 
-  function rand(min, max){ return Math.random() * (max - min) + min; }
+  // ---- Google Fonts loader ----
+  function extractFirstFontFamily(raw){
+    const s = String(raw || "").trim();
+    if (!s) return "";
+    const first = s.split(",")[0].trim();
+    const unquoted = first.replace(/^["']|["']$/g, "").trim();
+    const safe = unquoted.replace(/[^a-zA-Z0-9 \-]/g, "").trim();
+    return safe;
+  }
+
+  function ensureGoogleFontLoaded(fontFamily){
+    const family = extractFirstFontFamily(fontFamily);
+    if (!family) return;
+
+    const id = "dynamic-title-font";
+    let link = document.getElementById(id);
+    if (!link){
+      link = document.createElement("link");
+      link.id = id;
+      link.rel = "stylesheet";
+      document.head.appendChild(link);
+    }
+
+    const familyParam = encodeURIComponent(family).replace(/%20/g, "+");
+    link.href = `https://fonts.googleapis.com/css2?family=${familyParam}:wght@300;400;600;700;800&display=swap`;
+  }
+
+  function debounce(fn, wait){
+    let t = null;
+    return (...args) => {
+      clearTimeout(t);
+      t = setTimeout(() => fn(...args), wait);
+    };
+  }
+  const debouncedFontLoad = debounce((val) => ensureGoogleFontLoaded(val), 350);
+
+  // ---- Ornaments ----
+  function getOrnChar(){
+    return ORNAMENTS.find(o => o.value === state.custom.wrapObject)?.char || "★";
+  }
+
+  function generatePositions(qty, w, h, minDist){
+    const pts = [];
+    const maxAttempts = qty * 60;
+
+    let attempts = 0;
+    while (pts.length < qty && attempts < maxAttempts){
+      attempts++;
+      const x = rand(0, w);
+      const y = rand(0, h);
+
+      let ok = true;
+      for (const p of pts){
+        const dx = x - p.x;
+        const dy = y - p.y;
+        if ((dx*dx + dy*dy) < (minDist*minDist)){
+          ok = false;
+          break;
+        }
+      }
+      if (ok) pts.push({x,y});
+    }
+
+    while (pts.length < qty){
+      pts.push({ x: rand(0,w), y: rand(0,h) });
+    }
+    return pts;
+  }
 
   // ---- Apply preset styles ----
   function applyTitleStyle(d){
@@ -144,6 +214,7 @@
     h5.style.padding       = d.padding;
     h5.style.letterSpacing = d.letterSpacing || "0";
     h5.style.fontSize      = "1.3rem";
+    h5.style.textAlign     = "left";
   }
 
   function applyBodyStyle(d){
@@ -183,14 +254,9 @@
     state.custom.cardBg = rgbaFromHex(state.custom.cardBgHex, state.custom.cardBgAlpha);
     state.custom.artistText = rgbaFromHex(state.custom.artistTextHex, state.custom.artistTextAlpha);
 
-    // clamp ornaments
     state.custom.wrapObjectSize = Math.max(8, Math.min(80, Number(state.custom.wrapObjectSize) || 22));
     state.custom.wrapObjectQty = Math.max(0, Math.min(250, Number(state.custom.wrapObjectQty) || 0));
-  }
-
-  // ---- Ornaments rendering ----
-  function getOrnChar(){
-    return ORNAMENTS.find(o => o.value === state.custom.wrapObject)?.char || "★";
+    state.custom.wrapObjectDistance = Math.max(0, Math.min(120, Number(state.custom.wrapObjectDistance) || 0));
   }
 
   function renderOrnaments(){
@@ -199,30 +265,29 @@
     if (!layer || !wrap) return;
 
     layer.innerHTML = "";
+    layer.classList.toggle("is-animated", !!state.custom.wrapAnimate);
+    layer.classList.toggle("is-glow", !!state.custom.wrapGlow);
 
     const qty = state.custom.wrapObjectQty;
-    if (!state.customEnabled || qty <= 0) {
-      layer.classList.remove("is-animated");
-      return;
-    }
+    if (!state.customEnabled || qty <= 0) return;
 
     const char = getOrnChar();
     const size = state.custom.wrapObjectSize;
-
-    // color based on current "Rank BG" by default (looks nice)
-    // you can later expose a picker if you want
+    const minDist = state.custom.wrapObjectDistance;
     const ornColor = state.custom.rankBg || "#7c3aed";
 
     const w = wrap.clientWidth || 520;
     const h = wrap.clientHeight || 300;
+
+    const pts = generatePositions(qty, w, h, minDist);
 
     for (let i = 0; i < qty; i++){
       const s = document.createElement("span");
       s.className = "orn";
       s.textContent = char;
 
-      const x = rand(-10, w + 10);
-      const y = rand(-10, h + 10);
+      const {x,y} = pts[i];
+
       const rot = rand(-25, 25);
       const dx = rand(-16, 16);
       const dy = rand(-18, 18);
@@ -241,8 +306,6 @@
 
       layer.appendChild(s);
     }
-
-    layer.classList.toggle("is-animated", !!state.custom.wrapAnimate);
   }
 
   // ---- Apply preset + custom overrides ----
@@ -256,8 +319,23 @@
     const h5 = $("h5", block);
     if (!h5) return;
 
-    block.style.background = state.custom.titleBg;
+    // Title BG transparent toggle
+    if (state.custom.titleBgTransparent) {
+      block.style.background = "transparent";
+    } else {
+      block.style.background = state.custom.titleBg;
+    }
+
     h5.style.color = state.custom.titleText;
+
+    const raw = String(state.custom.titleFont || "").trim();
+    if (raw){
+      debouncedFontLoad(raw);
+      const hasCommaOrQuote = /['",]/.test(raw);
+      h5.style.fontFamily = hasCommaOrQuote ? raw : `'${raw}', sans-serif`;
+    }
+
+    h5.style.textAlign = state.custom.titleAlign || "left";
   }
 
   function applyBodyWithOverrides(){
@@ -293,7 +371,7 @@
     el.textContent = elDesiredTitle.value || (state.currentN ? `My Top ${state.currentN} Fave!` : "My Playlist");
   }
 
-  // ---- Custom color binding (picker + hex) ----
+  // ---- Custom color binding ----
   function bindHexColor(pickerId, hexId, getVal, setVal, onApply){
     const picker = $(pickerId);
     const hexIn  = $(hexId);
@@ -357,38 +435,65 @@
     `;
   }
 
-  function wrapObjectsControl(){
-    const options = ORNAMENTS.map(o => `<option value="${o.value}">${escapeHTML(o.label)}</option>`).join("");
+  function textControl(label, id, placeholder, value){
     return `
       <div class="ctrl">
         <div class="ctrl-head">
-          <label>Wrap BG Objects</label>
+          <label>${escapeHTML(label)}</label>
+        </div>
+        <input class="text-input" id="${id}" type="text" placeholder="${escapeHTML(placeholder)}" value="${escapeHTML(value || "")}" spellcheck="false" />
+      </div>
+    `;
+  }
+
+  function selectControl(label, id, options, value){
+    const opts = options.map(o => `<option value="${o.value}">${escapeHTML(o.label)}</option>`).join("");
+    return `
+      <div class="ctrl">
+        <div class="ctrl-head">
+          <label>${escapeHTML(label)}</label>
         </div>
         <div class="ctrl-inputs">
-          <select class="theme-select" id="wrapObjSelect">${options}</select>
+          <select class="theme-select" id="${id}">${opts}</select>
         </div>
       </div>
+    `;
+  }
 
+  function radioControl(label, name, options, checkedValue){
+    const radios = options.map(o => `
+      <label class="format-option" style="gap:8px;">
+        <input type="radio" name="${name}" value="${o.value}" ${o.value === checkedValue ? "checked" : ""}>
+        ${escapeHTML(o.label)}
+      </label>
+    `).join("");
+    return `
       <div class="ctrl">
         <div class="ctrl-head">
-          <label>Object Size</label>
+          <label>${escapeHTML(label)}</label>
         </div>
-        <input class="range" id="wrapObjSize" type="range" min="8" max="80" value="22">
+        <div class="ctrl-inputs" style="gap:14px; flex-wrap:wrap;">
+          ${radios}
+        </div>
       </div>
+    `;
+  }
 
+  function wrapObjectsControl(){
+    const options = ORNAMENTS.map(o => ({label:o.label, value:o.value}));
+    return `
+      ${selectControl("Wrap BG Objects", "wrapObjSelect", options, state.custom.wrapObject)}
+      ${rangeControl("Object Size", "wrapObjSize", 8, 80, state.custom.wrapObjectSize)}
       <div class="ctrl">
-        <div class="ctrl-head">
-          <label>Quantity</label>
-        </div>
+        <div class="ctrl-head"><label>Quantity</label></div>
         <div class="ctrl-inputs">
-          <input class="num-input" id="wrapObjQty" type="number" min="0" max="250" value="24" />
+          <input class="num-input" id="wrapObjQty" type="number" min="0" max="250" value="${state.custom.wrapObjectQty}" />
         </div>
       </div>
-
+      ${rangeControl("Distance", "wrapObjDist", 0, 120, state.custom.wrapObjectDistance)}
+      ${radioControl("Toggle Glows", "wrapGlow", [{label:"Off", value:"off"},{label:"On", value:"on"}], state.custom.wrapGlow ? "on" : "off")}
       <div class="ctrl">
-        <div class="ctrl-head">
-          <label>Animate</label>
-        </div>
+        <div class="ctrl-head"><label>Animate</label></div>
         <button class="small-btn" id="wrapObjAnimBtn" type="button">OFF</button>
       </div>
     `;
@@ -427,9 +532,22 @@
 
         <div class="settings-grid" id="custom-grid">
           ${colorControl("Title BG", "c_titleBg")}
-          ${colorControl("Title Text", "c_titleText")}
-          ${colorControl("Wrap BG", "c_wrapBg")}
+          <div class="ctrl">
+            <label class="toggle">
+              <input type="checkbox" id="titleBgTransparentChk">
+              Set this to transparent instead
+            </label>
+          </div>
 
+          ${colorControl("Title Text", "c_titleText")}
+          ${textControl("Title Font Style", "titleFontInput", "e.g. Poppins", state.custom.titleFont)}
+          ${selectControl("Title Alignment", "titleAlignSelect", [
+            {label:"Left", value:"left"},
+            {label:"Center", value:"center"},
+            {label:"Right", value:"right"},
+          ], state.custom.titleAlign)}
+
+          ${colorControl("Wrap BG", "c_wrapBg")}
           ${wrapObjectsControl()}
 
           ${colorControl("Card BG", "c_cardBg")}
@@ -518,9 +636,59 @@
       state.customEnabled = elCustomEnabled.checked;
       syncCustomGridVisibility();
       syncCustomDerived();
+
+      if (state.customEnabled && state.custom.titleFont) {
+        ensureGoogleFontLoaded(state.custom.titleFont);
+      }
+
       applyTitleWithOverrides();
       applyBodyWithOverrides();
     });
+
+    // ---- Bind Title BG transparency checkbox + disable inputs ----
+    const elTitleBgTransparent = $("#titleBgTransparentChk");
+    const titleBgPicker = $("#c_titleBg_picker");
+    const titleBgHex = $("#c_titleBg_hex");
+
+    if (elTitleBgTransparent){
+      elTitleBgTransparent.checked = !!state.custom.titleBgTransparent;
+
+      const syncTitleBgUI = () => {
+        const disabled = state.custom.titleBgTransparent;
+        titleBgPicker.disabled = disabled;
+        titleBgHex.disabled = disabled;
+        titleBgPicker.style.opacity = disabled ? "0.4" : "1";
+        titleBgHex.style.opacity = disabled ? "0.4" : "1";
+      };
+
+      syncTitleBgUI();
+
+      elTitleBgTransparent.addEventListener("change", () => {
+        state.custom.titleBgTransparent = elTitleBgTransparent.checked;
+        syncTitleBgUI();
+        applyTitleWithOverrides();
+      });
+    }
+
+    // ---- Bind Title Text font + align ----
+    const elFont = $("#titleFontInput");
+    if (elFont){
+      elFont.value = state.custom.titleFont || "";
+      elFont.addEventListener("input", () => {
+        state.custom.titleFont = elFont.value;
+        debouncedFontLoad(elFont.value);
+        applyTitleWithOverrides();
+      });
+    }
+
+    const elAlign = $("#titleAlignSelect");
+    if (elAlign){
+      elAlign.value = state.custom.titleAlign || "left";
+      elAlign.addEventListener("change", () => {
+        state.custom.titleAlign = elAlign.value;
+        applyTitleWithOverrides();
+      });
+    }
 
     // ---- Bind custom colors ----
     bindHexColor("#c_titleBg_picker", "#c_titleBg_hex",
@@ -592,10 +760,11 @@
       });
     }
 
-    // ---- Wrap BG Objects controls ----
+    // ---- Wrap BG controls ----
     const elObjSelect = $("#wrapObjSelect");
-    const elObjSize   = $("#wrapObjSize");
+    const elObjSize   = $("#wrapObjSize_range");
     const elObjQty    = $("#wrapObjQty");
+    const elObjDist   = $("#wrapObjDist_range");
     const elAnimBtn   = $("#wrapObjAnimBtn");
 
     if (elObjSelect){
@@ -624,6 +793,24 @@
       });
     }
 
+    if (elObjDist){
+      elObjDist.value = String(state.custom.wrapObjectDistance);
+      elObjDist.addEventListener("input", () => {
+        state.custom.wrapObjectDistance = Number(elObjDist.value);
+        syncCustomDerived();
+        applyBodyWithOverrides();
+      });
+    }
+
+    // glow radio
+    const glowRadios = document.querySelectorAll('input[name="wrapGlow"]');
+    glowRadios.forEach(r => {
+      r.addEventListener("change", () => {
+        state.custom.wrapGlow = (r.value === "on");
+        applyBodyWithOverrides();
+      });
+    });
+
     const syncAnimBtn = () => {
       if (!elAnimBtn) return;
       elAnimBtn.textContent = state.custom.wrapAnimate ? "ON" : "OFF";
@@ -646,12 +833,18 @@
 
       state.custom = {
         titleBg: "#0b1020",
+        titleBgTransparent: false, // NEW
         titleText: "#eef2ff",
+        titleFont: "",
+        titleAlign: "left",
+
         wrapBg: "#0b1020",
 
         wrapObject: "star",
         wrapObjectSize: 22,
         wrapObjectQty: 24,
+        wrapObjectDistance: 24,
+        wrapGlow: false,
         wrapAnimate: false,
 
         cardBgHex: "#ffffff",
