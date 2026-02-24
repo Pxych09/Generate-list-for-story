@@ -275,13 +275,13 @@
           <select id="bodyThemeSelect" class="theme-select theme-select-inline"></select>
           <button class="gen-btn" id="btn-random-body" type="button">🎲</button>
         </div>
-
-        <div class="ctrl-row">
+        <hr />
+        <div class="ctrl-row justify-content-end">
           <label class="toggle">
             <input type="checkbox" id="customEnabled">
             Enable Custom Colors
           </label>
-          <button class="btn-ghost" id="btn-reset-custom" type="button">Reset Custom</button>
+          <button class="btn-ghost w-100" id="btn-reset-custom" type="button">Reset Custom</button>
         </div>
 
         <div class="settings-grid" id="custom-grid">
