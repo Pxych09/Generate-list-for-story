@@ -146,7 +146,7 @@ body{
 }
 .field-group input::placeholder{ color: rgba(238,242,255,.35); }
 
-#result__section{ padding:0; overflow:hidden; }
+#result__section{ padding:0; overflow:visible; } /* allow sticky */
 #template__result{ padding:16px; }
 
 .empty-state{
@@ -303,7 +303,7 @@ body{
   cursor:pointer;
 }
 
-.hex-input{
+.hex-input, .text-input, .num-input{
   flex:1;
   background: var(--input-bg);
   border: var(--input-border);
@@ -313,29 +313,12 @@ body{
   color: var(--text-primary);
   outline:none;
 }
-.hex-input:focus{
+.hex-input:focus, .text-input:focus, .num-input:focus{
   border-color: var(--accent);
   box-shadow: var(--input-focus-ring);
 }
 
-.range{
-  width: 100%;
-}
-
-.num-input{
-  flex:1;
-  background: var(--input-bg);
-  border: var(--input-border);
-  border-radius: 10px;
-  padding: 7px 10px;
-  font-size: .78rem;
-  color: var(--text-primary);
-  outline:none;
-}
-.num-input:focus{
-  border-color: var(--accent);
-  box-shadow: var(--input-focus-ring);
-}
+.range{ width: 100%; }
 
 .small-btn{
   background: rgba(255,255,255,.06);
@@ -352,6 +335,58 @@ body{
 .small-btn.is-on{
   background: rgba(124,58,237,.18);
   border-color: rgba(124,58,237,.45);
+}
+
+/* ---- Sticky preview (#cards-wrap) ----
+   Sticky works only if no parent has overflow:hidden.
+   We already set #result__section overflow:visible above.
+*/
+#cards-wrap{
+  position: sticky;
+  top: 14px;                 /* distance from top of viewport */
+  z-index: 3;                /* stay above panel background */
+  overflow: hidden;
+}
+
+/* ---- Wrap ornaments layer ---- */
+#wrap-ornaments{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  z-index: 0;
+  overflow:hidden;
+  border-radius: inherit;
+}
+
+#wrap-ornaments .orn{
+  position:absolute;
+  opacity: .18;
+  user-select:none;
+  will-change: transform;
+  filter: drop-shadow(0 6px 16px rgba(0,0,0,.22));
+}
+
+#wrap-ornaments.is-animated .orn{
+  animation: floaty var(--orn-speed, 6s) ease-in-out infinite;
+}
+
+#wrap-ornaments.is-glow .orn{
+  filter:
+    drop-shadow(0 0 6px rgba(124,58,237,.55))
+    drop-shadow(0 0 14px rgba(124,58,237,.35))
+    drop-shadow(0 10px 18px rgba(0,0,0,.25));
+}
+
+@keyframes floaty{
+  0%   { transform: translate3d(0,0,0) rotate(var(--orn-rot,0deg)); }
+  50%  { transform: translate3d(var(--orn-dx,10px), var(--orn-dy,-12px), 0) rotate(calc(var(--orn-rot,0deg) + 10deg)); }
+  100% { transform: translate3d(0,0,0) rotate(var(--orn-rot,0deg)); }
+}
+
+/* Ensure content above ornaments */
+#title-block, .song-card{
+  position: relative;
+  z-index: 1;
 }
 
 #title-block h5{ margin:0; }
@@ -391,45 +426,6 @@ body{
 .song-card .song-info input:focus{
   background: rgba(255,255,255,.06);
   border-radius: 6px;
-}
-
-/* ---- Wrap ornaments layer ---- */
-#cards-wrap{
-  position: relative; /* needed for ornaments absolute positioning */
-  overflow: hidden;
-}
-
-#wrap-ornaments{
-  position:absolute;
-  inset:0;
-  pointer-events:none;
-  z-index: 0;
-  overflow:hidden;
-  border-radius: inherit;
-}
-
-#wrap-ornaments .orn{
-  position:absolute;
-  opacity: .18;
-  filter: drop-shadow(0 6px 16px rgba(0,0,0,.22));
-  user-select:none;
-  will-change: transform;
-}
-
-#wrap-ornaments.is-animated .orn{
-  animation: floaty var(--orn-speed, 6s) ease-in-out infinite;
-}
-
-@keyframes floaty{
-  0%   { transform: translate3d(0,0,0) rotate(var(--orn-rot,0deg)); }
-  50%  { transform: translate3d(var(--orn-dx,10px), var(--orn-dy,-12px), 0) rotate(calc(var(--orn-rot,0deg) + 10deg)); }
-  100% { transform: translate3d(0,0,0) rotate(var(--orn-rot,0deg)); }
-}
-
-/* Ensure actual content is above ornaments */
-#title-block, .song-card{
-  position: relative;
-  z-index: 1;
 }
 
 /* Used for download replacement spans */
