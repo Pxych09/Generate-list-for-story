@@ -190,6 +190,7 @@
 
   // ---- Template ----
   function generateTemplate(n){
+    
     state.currentN = n;
     const title = elDesiredTitle.value || `My Top ${n} Fave!`;
 
@@ -328,6 +329,12 @@
     const elCustomEnabled = $("#customEnabled");
     const btnResetCustom  = $("#btn-reset-custom");
 
+    const elCustomGrid = $("#custom-grid");
+    function syncCustomGridVisibility(){
+    if (!elCustomGrid) return;
+    elCustomGrid.classList.toggle("is-visible", !!state.customEnabled);
+    }
+
     const syncCustomDerived = () => {
       // card bg from hex + alpha slider
       state.custom.cardBg = rgbaFromHex(state.custom.cardBgHex, state.custom.cardBgAlpha);
@@ -348,6 +355,7 @@
 
     // init UI from state
     elCustomEnabled.checked = state.customEnabled;
+    syncCustomGridVisibility();
 
     setPicker("#c_titleBg", state.custom.titleBg);
     setPicker("#c_titleText", state.custom.titleText);
@@ -368,6 +376,7 @@
 
     elCustomEnabled.addEventListener("change", () => {
       state.customEnabled = elCustomEnabled.checked;
+      syncCustomGridVisibility();
       applyTitleWithOverrides();
       applyBodyWithOverrides();
     });
@@ -440,6 +449,7 @@
     btnResetCustom.addEventListener("click", () => {
       state.customEnabled = false;
       elCustomEnabled.checked = false;
+      syncCustomGridVisibility();
 
       state.custom = {
         titleBg: "#0b1020",
