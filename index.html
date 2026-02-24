@@ -1,764 +1,86 @@
+<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Your Favorite Music</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Playfair+Display:wght@400;700&family=Syne:wght@400;700;800&family=Space+Mono:wght@400;700&family=Righteous&family=Abril+Fatface&family=Archivo+Black&family=Chakra+Petch:wght@400;700&family=DM+Serif+Display&family=Cormorant+Garamond:wght@400;600;700&family=Josefin+Sans:wght@300;400;700&family=Outfit:wght@300;400;600;700&family=Albert+Sans:wght@300;400;700&display=swap" rel="stylesheet">
-    <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/12750/12750997.png" type="image/png">
-    <!-- html2canvas for screenshot -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Fave Music</title>
+
+  <!-- Bootstrap + Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Playfair+Display:wght@400;700&family=Syne:wght@400;700;800&family=Space+Mono:wght@400;700&family=Righteous&family=Abril+Fatface&family=Archivo+Black&family=Chakra+Petch:wght@400;700&family=DM+Serif+Display&family=Cormorant+Garamond:wght@400;600;700&family=Josefin+Sans:wght@300;400;700&family=Outfit:wght@300;400;600;700&family=Albert+Sans:wght@300;400;700&display=swap" rel="stylesheet">
+
+  <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/12750/12750997.png" type="image/png">
+
+  <!-- html2canvas -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <!-- Your CSS -->
+  <link rel="stylesheet" href="style.css" />
 </head>
 
-<style>
-    :root {
-        --page-bg:          #f7f6f3;
-        --page-font:        'Outfit', sans-serif;
-        --page-font-label:  'Outfit', sans-serif;
-        --accent:           #2563eb;
-        --accent-light:     #eff6ff;
-        --text-primary:     #111827;
-        --text-secondary:   #6b7280;
-        --surface:          #ffffff;
-        --surface-2:        #f3f4f6;
-        --border-color:     #e5e7eb;
-        --border-radius:    10px;
-        --border-style:     1px solid var(--border-color);
-        --input-bg:         #fff;
-        --input-border:     1px solid #d1d5db;
-        --input-radius:     8px;
-        --input-focus-ring: 0 0 0 3px rgba(37,99,235,.15);
-        --shadow-card:      0 1px 6px rgba(0,0,0,.06);
-        --shadow-main:      0 4px 24px rgba(0,0,0,.07);
-        --section-radius:   12px;
-    }
-
-    *, *::before, *::after { box-sizing: border-box; }
-
-    body {
-        min-height: 100vh;
-        background: var(--page-bg);
-        font-family: var(--page-font);
-        color: var(--text-primary);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: 24px 12px 48px;
-        transition: background .4s, color .3s;
-    }
-
-    .page-header {
-        width: min(560px, 100%);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 20px;
-    }
-    .page-header .app-title {
-        font-family: var(--page-font-label);
-        font-size: 1.05rem;
-        font-weight: 700;
-        color: var(--text-primary);
-        letter-spacing: .5px;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        transition: color .3s, font-family .3s;
-    }
-    .page-header .app-title .dot {
-        width: 8px; height: 8px;
-        border-radius: 50%;
-        background: var(--accent);
-        display: inline-block;
-        transition: background .3s;
-    }
-    .page-randomize-btn {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        background: var(--surface);
-        border: var(--border-style);
-        border-radius: 999px;
-        padding: 6px 14px;
-        font-family: var(--page-font);
-        font-size: .75rem;
-        font-weight: 600;
-        color: var(--text-secondary);
-        cursor: pointer;
-        transition: all .2s;
-        box-shadow: var(--shadow-card);
-    }
-    .page-randomize-btn:hover { color: var(--accent); border-color: var(--accent); transform: scale(1.03); }
-    .page-randomize-btn .spin { display: inline-block; transition: transform .4s; }
-    .page-randomize-btn:hover .spin { transform: rotate(180deg); }
-
-    .main {
-        width: min(560px, 100%);
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-    }
-
-    .app-section {
-        background: var(--surface);
-        border: var(--border-style);
-        border-radius: var(--section-radius);
-        padding: 20px;
-        box-shadow: var(--shadow-card);
-        transition: background .4s, border .3s, border-radius .3s, box-shadow .3s;
-    }
-    .section-label {
-        font-family: var(--page-font-label);
-        font-size: .68rem;
-        font-weight: 700;
-        letter-spacing: 2.5px;
-        text-transform: uppercase;
-        color: var(--text-secondary);
-        margin-bottom: 14px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        transition: font-family .3s, color .3s;
-    }
-    .section-label::after {
-        content: '';
-        flex: 1;
-        height: 1px;
-        background: var(--border-color);
-        transition: background .3s;
-    }
-
-    .field-group {
-        display: flex;
-        flex-direction: column;
-        gap: 5px;
-        margin-bottom: 14px;
-    }
-    .field-group:last-child { margin-bottom: 0; }
-    .field-group label {
-        font-size: .8rem;
-        font-weight: 600;
-        color: var(--text-secondary);
-        font-family: var(--page-font);
-        transition: color .3s, font-family .3s;
-    }
-    .field-group input {
-        background: var(--input-bg);
-        border: var(--input-border);
-        border-radius: var(--input-radius);
-        padding: 9px 12px;
-        font-size: .875rem;
-        font-family: var(--page-font);
-        color: var(--text-primary);
-        outline: none;
-        transition: border .2s, box-shadow .2s, background .3s, border-radius .3s, font-family .3s;
-        width: 100%;
-    }
-    .field-group input:focus { border-color: var(--accent); box-shadow: var(--input-focus-ring); }
-    .field-group input::placeholder { color: #bbb; }
-
-    #result__section { padding: 0; overflow: hidden; }
-    #template__result { padding: 16px; }
-    .empty-state {
-        text-align: center;
-        padding: 32px 16px;
-        color: var(--text-secondary);
-        font-size: .85rem;
-    }
-    .empty-state i { font-size: 2rem; margin-bottom: 8px; display: block; opacity: .3; }
-
-    .settings-panel {
-        background: var(--surface-2);
-        border: var(--border-style);
-        border-radius: calc(var(--section-radius) - 2px);
-        padding: 12px 14px;
-        margin-bottom: 14px;
-        transition: background .4s, border .3s;
-    }
-    .settings-panel .s-label {
-        font-size: .65rem;
-        font-weight: 700;
-        letter-spacing: 2px;
-        text-transform: uppercase;
-        color: var(--text-secondary);
-        margin-bottom: 10px;
-    }
-    .settings-row {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        flex-wrap: wrap;
-        margin-bottom: 6px;
-    }
-    .settings-row:last-child { margin-bottom: 0; }
-    .settings-row span { font-size: .75rem; color: var(--text-secondary); }
-    .gen-btn {
-        background: var(--accent);
-        color: #fff;
-        border: none;
-        border-radius: 6px;
-        padding: 4px 11px;
-        font-size: .72rem;
-        font-weight: 700;
-        cursor: pointer;
-        font-family: var(--page-font);
-        transition: opacity .2s, transform .1s;
-    }
-    .gen-btn:hover { opacity: .85; transform: scale(1.04); }
-    .gen-btn:active { transform: scale(.97); }
-    .style-badge {
-        font-size: .68rem;
-        background: var(--accent-light);
-        color: var(--accent);
-        border-radius: 4px;
-        padding: 2px 8px;
-        font-weight: 600;
-        transition: background .3s, color .3s;
-    }
-
-    #title-block h5 { margin: 0; }
-
-    .song-card {
-        display: flex;
-        overflow: hidden;
-        transition: transform .15s, background .3s, box-shadow .3s;
-        cursor: default;
-    }
-    .song-card:hover { transform: translateX(4px); }
-    .song-card .rank-badge {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 44px;
-        font-weight: 800;
-        font-size: .85rem;
-        transition: background .3s, color .3s;
-    }
-    .song-card .song-info {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        padding: 7px 12px;
-    }
-    .song-card .song-info input {
-        background: transparent;
-        border: none;
-        outline: none;
-        width: 100%;
-        font-family: var(--page-font);
-        transition: color .3s, font-family .3s;
-    }
-    .song-card .song-info input:focus { background: rgba(0,0,0,.03); border-radius: 3px; }
-
-    #page-design-badge {
-        font-size: .68rem;
-        color: var(--text-secondary);
-        opacity: .7;
-        transition: opacity .3s;
-    }
-
-    /* ── Download Button ──────────────────────────────────────────────────── */
-    .download-wrap {
-        padding: 12px 16px 16px;
-        display: flex;
-        justify-content: center;
-    }
-    .download-btn {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        background: var(--accent);
-        color: #fff;
-        border: none;
-        border-radius: 999px;
-        padding: 10px 24px;
-        font-family: var(--page-font);
-        font-size: .82rem;
-        font-weight: 700;
-        cursor: pointer;
-        letter-spacing: .3px;
-        box-shadow: 0 2px 12px rgba(0,0,0,.12);
-        transition: opacity .2s, transform .15s, box-shadow .2s;
-    }
-    .download-btn:hover { opacity: .9; transform: translateY(-1px); box-shadow: 0 4px 18px rgba(0,0,0,.16); }
-    .download-btn:active { transform: translateY(0); box-shadow: 0 1px 6px rgba(0,0,0,.1); }
-    .download-btn.loading { opacity: .65; pointer-events: none; }
-    .download-btn i { font-size: .95rem; }
-
-    .main, .app-section, .page-header .app-title,
-    .field-group label, .field-group input,
-    body { transition-duration: .35s; }
-
-    .fsz-sm { font-size: .765rem !important; }
-    .fsz-md { font-size: .900rem !important; }
-</style>
-
 <body>
-
-    <header class="page-header">
-        <div class="app-title">
-            <span class="dot"></span>
-            My Fave Music
-        </div>
-        <div style="display:flex;align-items:center;gap:10px;">
-            <span id="page-design-badge">—</span>
-            <button class="page-randomize-btn" onclick="randomizePageDesign()">
-                <span class="spin">✦</span> Randomize Page
-            </button>
-        </div>
-    </header>
-
-    <div class="main" id="main-wrap">
-
-        <section class="app-section" id="custom__section">
-            <div class="section-label">Setup</div>
-            <div class="field-group">
-                <label for="desiredTitle">Write your desired title:</label>
-                <input type="text" id="desiredTitle"
-                    placeholder="e.g. My Top Favorites — February 2026"
-                    oninput="refreshTitle()">
-            </div>
-            <div class="field-group">
-                <label for="numberOfSong">How many songs?</label>
-                <input type="number" id="numberOfSong"
-                    placeholder="e.g. 5"
-                    min="1" max="50"
-                    onchange="listSongsFunc(this)">
-            </div>
-        </section>
-
-        <section class="app-section" id="result__section">
-            <div id="template__result">
-                <div class="empty-state">
-                    <i class="bi bi-music-note-list"></i>
-                    Enter a number above to generate your list
-                </div>
-            </div>
-            <!-- Download button — hidden until list is generated -->
-            <div class="download-wrap" id="download-wrap" style="display:none;">
-                <button class="download-btn" id="download-btn" onclick="downloadImage()">
-                    <i class="bi bi-download"></i> Download Image
-                </button>
-            </div>
-        </section>
-
+  <header class="page-header">
+    <div class="app-title">
+      <span class="dot"></span>
+      My Fave Music
     </div>
 
-</body>
+    <div class="header-actions">
+      <span id="page-design-badge">—</span>
+      <button class="page-randomize-btn" id="btn-randomize-page" type="button">
+        <span class="spin">✦</span> Randomize Page
+      </button>
+    </div>
+  </header>
 
-<script>
-    const elTemplateResult = document.getElementById('template__result');
-    const elDesiredTitle   = document.getElementById('desiredTitle');
+  <div class="main" id="main-wrap">
+    <section class="app-section" id="custom__section">
+      <div class="section-label">Setup</div>
 
-    const pageDesigns = [
-        {
-            name: "Studio White",
-            vars: {
-                '--page-bg':         '#f9f9f7',
-                '--page-font':       "'Albert Sans', sans-serif",
-                '--page-font-label': "'Albert Sans', sans-serif",
-                '--accent':          '#111827',
-                '--accent-light':    '#f3f4f6',
-                '--text-primary':    '#111827',
-                '--text-secondary':  '#6b7280',
-                '--surface':         '#ffffff',
-                '--surface-2':       '#f9fafb',
-                '--border-color':    '#e5e7eb',
-                '--border-radius':   '10px',
-                '--border-style':    '1px solid #e5e7eb',
-                '--input-bg':        '#fff',
-                '--input-border':    '1px solid #d1d5db',
-                '--input-radius':    '8px',
-                '--input-focus-ring':'0 0 0 3px rgba(17,24,39,.1)',
-                '--shadow-card':     '0 1px 4px rgba(0,0,0,.05)',
-                '--shadow-main':     '0 4px 20px rgba(0,0,0,.06)',
-                '--section-radius':  '12px',
-            }
-        },
-        {
-            name: "Sage & Linen",
-            vars: {
-                '--page-bg':         '#f4f1ec',
-                '--page-font':       "'Cormorant Garamond', serif",
-                '--page-font-label': "'Josefin Sans', sans-serif",
-                '--accent':          '#5a7a5c',
-                '--accent-light':    '#eef4ee',
-                '--text-primary':    '#2d2a24',
-                '--text-secondary':  '#7a7060',
-                '--surface':         '#faf8f4',
-                '--surface-2':       '#ede9e1',
-                '--border-color':    '#d8d1c4',
-                '--border-radius':   '6px',
-                '--border-style':    '1px solid #d8d1c4',
-                '--input-bg':        '#faf8f4',
-                '--input-border':    '1px solid #c8c1b4',
-                '--input-radius':    '4px',
-                '--input-focus-ring':'0 0 0 3px rgba(90,122,92,.12)',
-                '--shadow-card':     '0 2px 8px rgba(45,42,36,.06)',
-                '--shadow-main':     '0 4px 20px rgba(45,42,36,.08)',
-                '--section-radius':  '6px',
-            }
-        },
-        {
-            name: "Blueprint",
-            vars: {
-                '--page-bg':         '#eef2ff',
-                '--page-font':       "'Josefin Sans', sans-serif",
-                '--page-font-label': "'Josefin Sans', sans-serif",
-                '--accent':          '#3730a3',
-                '--accent-light':    '#e0e7ff',
-                '--text-primary':    '#1e1b4b',
-                '--text-secondary':  '#6366f1',
-                '--surface':         '#fff',
-                '--surface-2':       '#eef2ff',
-                '--border-color':    '#c7d2fe',
-                '--border-radius':   '8px',
-                '--border-style':    '1.5px solid #c7d2fe',
-                '--input-bg':        '#f5f3ff',
-                '--input-border':    '1.5px solid #a5b4fc',
-                '--input-radius':    '6px',
-                '--input-focus-ring':'0 0 0 3px rgba(55,48,163,.15)',
-                '--shadow-card':     '0 2px 10px rgba(99,102,241,.08)',
-                '--shadow-main':     '0 4px 24px rgba(99,102,241,.12)',
-                '--section-radius':  '10px',
-            }
-        },
-        {
-            name: "Warm Paper",
-            vars: {
-                '--page-bg':         '#fdf6e3',
-                '--page-font':       "'DM Serif Display', serif",
-                '--page-font-label': "'Space Mono', monospace",
-                '--accent':          '#b45309',
-                '--accent-light':    '#fef3c7',
-                '--text-primary':    '#292524',
-                '--text-secondary':  '#78716c',
-                '--surface':         '#fffbf0',
-                '--surface-2':       '#fef9e7',
-                '--border-color':    '#e5dcc8',
-                '--border-radius':   '4px',
-                '--border-style':    '1px solid #e5dcc8',
-                '--input-bg':        '#fffbf0',
-                '--input-border':    '1px solid #d6c9a8',
-                '--input-radius':    '3px',
-                '--input-focus-ring':'0 0 0 3px rgba(180,83,9,.12)',
-                '--shadow-card':     '1px 2px 6px rgba(41,37,36,.06)',
-                '--shadow-main':     '2px 4px 16px rgba(41,37,36,.08)',
-                '--section-radius':  '4px',
-            }
-        },
-        {
-            name: "Frost",
-            vars: {
-                '--page-bg':         'linear-gradient(160deg,#e8f4fd 0%,#f0f9ff 60%,#fafffe 100%)',
-                '--page-font':       "'Outfit', sans-serif",
-                '--page-font-label': "'Syne', sans-serif",
-                '--accent':          '#0284c7',
-                '--accent-light':    '#e0f2fe',
-                '--text-primary':    '#0c4a6e',
-                '--text-secondary':  '#38bdf8',
-                '--surface':         'rgba(255,255,255,0.75)',
-                '--surface-2':       'rgba(224,242,254,0.5)',
-                '--border-color':    '#bae6fd',
-                '--border-radius':   '14px',
-                '--border-style':    '1px solid rgba(186,230,253,.8)',
-                '--input-bg':        'rgba(255,255,255,.8)',
-                '--input-border':    '1px solid #7dd3fc',
-                '--input-radius':    '10px',
-                '--input-focus-ring':'0 0 0 3px rgba(2,132,199,.15)',
-                '--shadow-card':     '0 4px 16px rgba(12,74,110,.06)',
-                '--shadow-main':     '0 8px 32px rgba(12,74,110,.08)',
-                '--section-radius':  '16px',
-            }
-        },
-        {
-            name: "Editorial",
-            vars: {
-                '--page-bg':         '#fff',
-                '--page-font':       "'Playfair Display', serif",
-                '--page-font-label': "'Josefin Sans', sans-serif",
-                '--accent':          '#dc2626',
-                '--accent-light':    '#fef2f2',
-                '--text-primary':    '#0f0f0f',
-                '--text-secondary':  '#525252',
-                '--surface':         '#fff',
-                '--surface-2':       '#fafafa',
-                '--border-color':    '#0f0f0f',
-                '--border-radius':   '0px',
-                '--border-style':    '1.5px solid #0f0f0f',
-                '--input-bg':        '#fff',
-                '--input-border':    '1.5px solid #0f0f0f',
-                '--input-radius':    '0px',
-                '--input-focus-ring':'none',
-                '--shadow-card':     'none',
-                '--shadow-main':     'none',
-                '--section-radius':  '0px',
-            }
-        },
-        {
-            name: "Rose Quartz",
-            vars: {
-                '--page-bg':         '#fff5f7',
-                '--page-font':       "'Outfit', sans-serif",
-                '--page-font-label': "'Syne', sans-serif",
-                '--accent':          '#e11d48',
-                '--accent-light':    '#ffe4e6',
-                '--text-primary':    '#4c0519',
-                '--text-secondary':  '#9f1239',
-                '--surface':         '#fff',
-                '--surface-2':       '#fff1f2',
-                '--border-color':    '#fecdd3',
-                '--border-radius':   '16px',
-                '--border-style':    '1px solid #fecdd3',
-                '--input-bg':        '#fff8f8',
-                '--input-border':    '1px solid #fda4af',
-                '--input-radius':    '12px',
-                '--input-focus-ring':'0 0 0 3px rgba(225,29,72,.12)',
-                '--shadow-card':     '0 2px 12px rgba(225,29,72,.07)',
-                '--shadow-main':     '0 6px 24px rgba(225,29,72,.08)',
-                '--section-radius':  '18px',
-            }
-        },
-        {
-            name: "Concrete",
-            vars: {
-                '--page-bg':         '#f1f0ee',
-                '--page-font':       "'Chakra Petch', sans-serif",
-                '--page-font-label': "'Chakra Petch', sans-serif",
-                '--accent':          '#374151',
-                '--accent-light':    '#e5e7eb',
-                '--text-primary':    '#111',
-                '--text-secondary':  '#6b7280',
-                '--surface':         '#e8e6e2',
-                '--surface-2':       '#dedad4',
-                '--border-color':    '#c9c5bd',
-                '--border-radius':   '3px',
-                '--border-style':    '2px solid #c9c5bd',
-                '--input-bg':        '#dedad4',
-                '--input-border':    '2px solid #b3afa8',
-                '--input-radius':    '2px',
-                '--input-focus-ring':'0 0 0 2px rgba(55,65,81,.2)',
-                '--shadow-card':     'inset 0 1px 3px rgba(0,0,0,.1)',
-                '--shadow-main':     '3px 3px 0 rgba(0,0,0,.08)',
-                '--section-radius':  '3px',
-            }
-        },
-    ];
+      <div class="field-group">
+        <label for="desiredTitle">Write your desired title:</label>
+        <input
+          type="text"
+          id="desiredTitle"
+          placeholder="e.g. My Top Favorites — February 2026"
+        />
+      </div>
 
-    const titleDesigns = [
-        { name:"Neon Noir",   font:"'Bebas Neue',sans-serif",       bg:"linear-gradient(135deg,#0f0c29,#302b63,#24243e)", color:"#f0e130", textShadow:"0 0 12px #f0e13088",   padding:"16px 20px", letterSpacing:"4px", borderRadius:"4px 4px 0 0" },
-        { name:"Pastel Pop",  font:"'Syne',sans-serif",             bg:"linear-gradient(90deg,#ffecd2,#fcb69f)",          color:"#4a0e0e", textShadow:"none",                  padding:"14px 18px", letterSpacing:"1px", borderRadius:"12px 12px 0 0" },
-        { name:"Editorial",   font:"'Playfair Display',serif",      bg:"#fff",                                            color:"#111",    textShadow:"none",                  padding:"16px 20px", letterSpacing:"0px", borderRadius:"0", borderBottom:"3px solid #111" },
-        { name:"Retro Tape",  font:"'Space Mono',monospace",        bg:"#f5f0e1",                                         color:"#c0392b", textShadow:"2px 2px 0 #7f8c8d",     padding:"14px 18px", letterSpacing:"2px", borderRadius:"0" },
-        { name:"Rave",        font:"'Righteous',cursive",           bg:"linear-gradient(135deg,#f953c6,#b91d73)",         color:"#fff",    textShadow:"0 0 8px #fff8",         padding:"16px 20px", letterSpacing:"3px", borderRadius:"8px 8px 0 0" },
-        { name:"Luxury Gold", font:"'Abril Fatface',serif",         bg:"#1a1200",                                         color:"#d4af37", textShadow:"0 0 6px #d4af3766",     padding:"18px 22px", letterSpacing:"2px", borderRadius:"6px 6px 0 0" },
-        { name:"Ice Cold",    font:"'Chakra Petch',sans-serif",     bg:"linear-gradient(120deg,#e0eafc,#cfdef3)",         color:"#1a3c6e", textShadow:"none",                  padding:"14px 18px", letterSpacing:"2px", borderRadius:"4px 4px 0 0" },
-        { name:"Brutalist",   font:"'Archivo Black',sans-serif",    bg:"#000",                                            color:"#fff",    textShadow:"3px 3px 0 #ff0040",     padding:"14px 18px", letterSpacing:"0",   borderRadius:"0" },
-    ];
+      <div class="field-group">
+        <label for="numberOfSong">How many songs?</label>
+        <input
+          type="number"
+          id="numberOfSong"
+          placeholder="e.g. 5"
+          min="1"
+          max="50"
+        />
+      </div>
+    </section>
 
-    const bodyDesigns = [
-        { name:"Dark Cards",    wrapBg:"#1a1a2e",                                         cardBg:"#16213e",               rankBg:"#e94560",                               rankColor:"#fff",     textColor:"#eee",    subColor:"#aaa",    borderRadius:"8px",  gap:"8px",  padding:"10px", boxShadow:"none",                          outline:"none" },
-        { name:"Soft Gradient", wrapBg:"linear-gradient(160deg,#ffecd2 0%,#fcb69f 100%)", cardBg:"rgba(255,255,255,0.6)", rankBg:"#c0392b",                               rankColor:"#fff",     textColor:"#333",    subColor:"#888",    borderRadius:"12px", gap:"10px", padding:"12px", boxShadow:"0 2px 8px rgba(0,0,0,.1)",      outline:"none" },
-        { name:"Mono Print",    wrapBg:"#f5f0e1",                                         cardBg:"#fff",                  rankBg:"#111",                                  rankColor:"#f5f0e1",  textColor:"#111",    subColor:"#666",    borderRadius:"0",    gap:"0",    padding:"8px 0",boxShadow:"none",                          outline:"none", cardBorderBottom:"1px solid #ccc" },
-        { name:"Neon Terminal", wrapBg:"#0d0d0d",                                         cardBg:"#111",                  rankBg:"#00ff88",                               rankColor:"#000",     textColor:"#00ff88", subColor:"#00aa55", borderRadius:"4px",  gap:"6px",  padding:"10px", boxShadow:"0 0 8px #00ff8833",             outline:"none" },
-        { name:"Candy Stripe",  wrapBg:"#fff0f6",                                         cardBg:"#fff",                  rankBg:"linear-gradient(135deg,#f953c6,#b91d73)",rankColor:"#fff",     textColor:"#4a004e", subColor:"#b91d73", borderRadius:"16px", gap:"10px", padding:"12px", boxShadow:"0 2px 6px rgba(185,29,115,.15)",outline:"none" },
-        { name:"Gold Rush",     wrapBg:"#1a1200",                                         cardBg:"#211900",               rankBg:"#d4af37",                               rankColor:"#1a1200",  textColor:"#d4af37", subColor:"#8a7020", borderRadius:"6px",  gap:"8px",  padding:"10px", boxShadow:"none",                          outline:"1px solid #d4af3744" },
-        { name:"Clean Light",   wrapBg:"#f8f9fa",                                         cardBg:"#fff",                  rankBg:"#007bff",                               rankColor:"#fff",     textColor:"#212529", subColor:"#6c757d", borderRadius:"8px",  gap:"8px",  padding:"10px", boxShadow:"0 1px 4px rgba(0,0,0,.08)",     outline:"none" },
-        { name:"Brutalist Red", wrapBg:"#ff0040",                                         cardBg:"#fff",                  rankBg:"#000",                                  rankColor:"#ff0040",  textColor:"#000",    subColor:"#333",    borderRadius:"0",    gap:"4px",  padding:"8px",  boxShadow:"none",                          outline:"2px solid #000" },
-    ];
-
-    let activeTitleDesign = titleDesigns[6];
-    let activeBodyDesign  = bodyDesigns[6];
-    let activePageDesign  = pageDesigns[0];
-    let currentN = 0;
-
-    function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
-
-    function applyPageDesign(d) {
-        const root = document.documentElement;
-        Object.entries(d.vars).forEach(([k, v]) => root.style.setProperty(k, v));
-        document.body.style.background = d.vars['--page-bg'];
-        document.body.style.fontFamily = d.vars['--page-font'];
-        const badge = document.getElementById('page-design-badge');
-        if (badge) badge.textContent = d.name;
-        document.querySelectorAll('.gen-btn').forEach(b => b.style.background = d.vars['--accent']);
-        document.querySelectorAll('.style-badge').forEach(b => {
-            b.style.background = d.vars['--accent-light'];
-            b.style.color      = d.vars['--accent'];
-        });
-        // Update download button color too
-        const dlBtn = document.getElementById('download-btn');
-        if (dlBtn) dlBtn.style.background = d.vars['--accent'];
-    }
-
-    function randomizePageDesign() {
-        activePageDesign = pick(pageDesigns);
-        applyPageDesign(activePageDesign);
-    }
-
-    function applyTitleStyle(d) {
-        const block = document.getElementById('title-block');
-        if (!block) return;
-        const h5 = block.querySelector('h5');
-        block.style.background   = d.bg;
-        block.style.borderRadius = d.borderRadius || '0';
-        block.style.borderBottom = d.borderBottom || 'none';
-        h5.style.fontFamily      = d.font;
-        h5.style.color           = d.color;
-        h5.style.textShadow      = d.textShadow;
-        h5.style.padding         = d.padding;
-        h5.style.letterSpacing   = d.letterSpacing;
-        h5.style.fontSize        = '1.3rem';
-    }
-
-    function applyBodyStyle(d) {
-        const wrap = document.getElementById('cards-wrap');
-        if (!wrap) return;
-        wrap.style.background    = d.wrapBg;
-        wrap.style.padding       = d.padding;
-        wrap.style.borderRadius  = d.borderRadius;
-        wrap.style.display       = 'flex';
-        wrap.style.flexDirection = 'column';
-        wrap.style.gap           = d.gap;
-        wrap.querySelectorAll('.song-card').forEach(card => {
-            card.style.background   = d.cardBg;
-            card.style.borderRadius = d.borderRadius;
-            card.style.outline      = d.outline || 'none';
-            card.style.boxShadow    = d.boxShadow || 'none';
-            card.style.overflow     = 'hidden';
-            card.style.borderBottom = d.cardBorderBottom || 'none';
-            card.querySelector('.rank-badge').style.background = d.rankBg;
-            card.querySelector('.rank-badge').style.color      = d.rankColor;
-            const [t, a] = card.querySelectorAll('input');
-            t.style.color = d.textColor;
-            a.style.color = d.subColor;
-        });
-    }
-
-    function randomizeTitleDesign() {
-        activeTitleDesign = pick(titleDesigns);
-        const b = document.getElementById('title-design-name');
-        if (b) b.textContent = activeTitleDesign.name;
-        applyTitleStyle(activeTitleDesign);
-    }
-
-    function randomizeBodyDesign() {
-        activeBodyDesign = pick(bodyDesigns);
-        const b = document.getElementById('body-design-name');
-        if (b) b.textContent = activeBodyDesign.name;
-        applyBodyStyle(activeBodyDesign);
-    }
-
-    function refreshTitle() {
-        const el = document.querySelector('#title-block h5');
-        if (el) el.textContent = elDesiredTitle.value || (currentN ? `My Top ${currentN} Fave!` : 'My Playlist');
-    }
-
-    function generateTemplate(n) {
-        currentN = n;
-        const title = elDesiredTitle.value || `My Top ${n} Fave!`;
-
-        let html = `
-        <div class="settings-panel">
-            <div class="s-label">⚙ Card Design Settings</div>
-            <div class="settings-row">
-                <span>Title style:</span>
-                <button class="gen-btn" onclick="randomizeTitleDesign()">🎲 Randomize</button>
-                <span class="style-badge" id="title-design-name">${activeTitleDesign.name}</span>
-            </div>
-            <div class="settings-row">
-                <span>Card style:</span>
-                <button class="gen-btn" onclick="randomizeBodyDesign()">🎲 Randomize</button>
-                <span class="style-badge" id="body-design-name">${activeBodyDesign.name}</span>
-            </div>
+    <section class="app-section" id="result__section">
+      <div id="template__result">
+        <div class="empty-state">
+          <i class="bi bi-music-note-list"></i>
+          Enter a number above to generate your list
         </div>
+      </div>
 
-        <div id="cards-wrap"><div id="title-block"><h5>${title}</h5></div>`;
+      <div class="download-wrap" id="download-wrap" style="display:none;">
+        <button class="download-btn" id="download-btn" type="button">
+          <i class="bi bi-download"></i> Download Image
+        </button>
+      </div>
+    </section>
+  </div>
 
-        for (let i = 0; i < n; i++) {
-            html += `
-            <div class="song-card" data-num="${i + 1}">
-                <div class="rank-badge">#${i + 1}</div>
-                <div class="song-info">
-                    <input type="text" value="Song Title" class="fsz-md fw-bold" placeholder="Song Title">
-                    <input type="text" value="Artist Name" class="fsz-sm" placeholder="Artist Name">
-                </div>
-            </div>`;
-        }
-
-        html += `</div>`;
-        elTemplateResult.innerHTML = html;
-
-        applyPageDesign(activePageDesign);
-        applyTitleStyle(activeTitleDesign);
-        applyBodyStyle(activeBodyDesign);
-
-        // Show download button
-        document.getElementById('download-wrap').style.display = 'flex';
-    }
-
-    function listSongsFunc(e) {
-        const val = Number(e.value);
-        if (!Number.isNaN(val) && val >= 1) generateTemplate(val);
-    }
-
-    // ─── Download Image ────────────────────────────────────────────────────────────
-    async function downloadImage() {
-        const target = document.getElementById('cards-wrap');
-        if (!target) return;
-
-        const btn = document.getElementById('download-btn');
-        btn.classList.add('loading');
-        btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Capturing...';
-
-        // Temporarily replace inputs with plain text divs so html2canvas renders text properly
-        const inputs = target.querySelectorAll('input');
-        const replacements = [];
-        inputs.forEach(inp => {
-            const span = document.createElement('span');
-            span.textContent  = inp.value || inp.placeholder;
-            span.style.cssText = window.getComputedStyle(inp).cssText;
-            span.style.display = 'block';
-            inp.parentNode.insertBefore(span, inp);
-            inp.style.display = 'none';
-            replacements.push({ inp, span });
-        });
-
-        try {
-            const canvas = await html2canvas(target, {
-                scale: 2,               // 2× for crisp resolution
-                useCORS: true,
-                backgroundColor: null,  // preserve transparent backgrounds
-                logging: false,
-            });
-
-            // Restore inputs
-            replacements.forEach(({ inp, span }) => {
-                span.remove();
-                inp.style.display = '';
-            });
-
-            // Trigger download
-            const link = document.createElement('a');
-            const titleText = (elDesiredTitle.value || `my-top-${currentN}`).replace(/\s+/g, '-').toLowerCase();
-            link.download = `${titleText}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-
-        } catch (err) {
-            console.error('Screenshot failed:', err);
-            replacements.forEach(({ inp, span }) => { span.remove(); inp.style.display = ''; });
-        }
-
-        btn.classList.remove('loading');
-        btn.innerHTML = '<i class="bi bi-download"></i> Download Image';
-    }
-
-    // Init
-    applyPageDesign(activePageDesign);
-</script>
+  <!-- Your JS -->
+  <script src="script.js"></script>
+</body>
 </html>
