@@ -11,8 +11,8 @@
   const $ = (sel, root = document) => root.querySelector(sel);
   const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
-  // ---- Locked page theme: Midnight Ink (no randomizer, no picker) ----
-  // All page theme vars are now in CSS :root, so we don't need pageDesign JS at all.
+  // ---- Locked page theme: Midnight Ink ----
+  // Page colors/vars live in CSS :root. No page randomizer. No page picker.
 
   const titleDesigns = [
     { name:"Neon Noir",   font:"'Bebas Neue',sans-serif",    bg:"linear-gradient(135deg,#0f0c29,#302b63,#24243e)", color:"#f0e130", textShadow:"0 0 12px #f0e13088", padding:"16px 20px", letterSpacing:"4px", borderRadius:"4px 4px 0 0" },
@@ -40,12 +40,33 @@
     { name:"Ink Minimal",   wrapBg:"#0b1020", cardBg:"rgba(255,255,255,.04)", rankBg:"#7c3aed", rankColor:"#fff", textColor:"#eef2ff", subColor:"rgba(238,242,255,.72)", borderRadius:"12px", gap:"10px", padding:"12px", boxShadow:"none", outline:"1px solid rgba(255,255,255,.10)" },
   ];
 
+  // ---- State ----
   const state = {
     activeTitle: titleDesigns[6],
-    activeBody: bodyDesigns[9], // Ink Minimal looks great on Midnight Ink
+    activeBody: bodyDesigns[9],
     currentN: 0,
+
+    customEnabled: false,
+    custom: {
+      titleBg: "#0b1020",
+      titleText: "#eef2ff",
+
+      wrapBg: "#0b1020",
+      cardBgHex: "#ffffff",         // used for picker only
+      cardBgAlpha: 0.04,            // 0..1
+      cardBg: "rgba(255,255,255,.04)",
+
+      rankBg: "#7c3aed",
+      rankText: "#ffffff",
+
+      songText: "#eef2ff",
+      artistTextHex: "#eef2ff",     // used for picker
+      artistTextAlpha: 0.72,
+      artistText: "rgba(238,242,255,.72)",
+    }
   };
 
+  // ---- Utils ----
   function escapeHTML(str){
     return String(str)
       .replaceAll("&","&amp;")
@@ -55,14 +76,26 @@
       .replaceAll("'","&#039;");
   }
 
-  function refreshTitle(){
-    const el = $("#title-block h5");
-    if (!el) return;
-    el.textContent = elDesiredTitle.value || (state.currentN ? `My Top ${state.currentN} Fave!` : "My Playlist");
+  function fillSelect(selectEl, items){
+    selectEl.innerHTML = items
+      .map(d => `<option value="${escapeHTML(d.name)}">${escapeHTML(d.name)}</option>`)
+      .join("");
   }
 
+  function hexToRgb(hex){
+    const h = hex.replace("#","");
+    const full = h.length === 3 ? h.split("").map(c=>c+c).join("") : h;
+    const n = parseInt(full, 16);
+    return { r:(n>>16)&255, g:(n>>8)&255, b:n&255 };
+  }
+
+  function rgbaFromHex(hex, a){
+    const {r,g,b} = hexToRgb(hex);
+    return `rgba(${r},${g},${b},${a})`;
+  }
+
+  // ---- Apply preset styles ----
   function applyTitleStyle(d){
-    state.activeTitle = d;
     const block = $("#title-block");
     if (!block) return;
     const h5 = $("h5", block);
@@ -81,7 +114,6 @@
   }
 
   function applyBodyStyle(d){
-    state.activeBody = d;
     const wrap = $("#cards-wrap");
     if (!wrap) return;
 
@@ -110,10 +142,53 @@
     });
   }
 
-  function fillSelect(selectEl, items){
-    selectEl.innerHTML = items.map(d => `<option value="${escapeHTML(d.name)}">${escapeHTML(d.name)}</option>`).join("");
+  // ---- Apply preset + custom overrides ----
+  function applyTitleWithOverrides(){
+    applyTitleStyle(state.activeTitle);
+
+    if (!state.customEnabled) return;
+
+    const block = $("#title-block");
+    if (!block) return;
+    const h5 = $("h5", block);
+    if (!h5) return;
+
+    block.style.background = state.custom.titleBg;
+    h5.style.color = state.custom.titleText;
   }
 
+  function applyBodyWithOverrides(){
+    applyBodyStyle(state.activeBody);
+
+    if (!state.customEnabled) return;
+
+    const wrap = $("#cards-wrap");
+    if (!wrap) return;
+
+    wrap.style.background = state.custom.wrapBg;
+
+    wrap.querySelectorAll(".song-card").forEach(card => {
+      card.style.background = state.custom.cardBg;
+
+      const rank = $(".rank-badge", card);
+      if (rank){
+        rank.style.background = state.custom.rankBg;
+        rank.style.color = state.custom.rankText;
+      }
+
+      const inputs = card.querySelectorAll("input");
+      if (inputs[0]) inputs[0].style.color = state.custom.songText;
+      if (inputs[1]) inputs[1].style.color = state.custom.artistText;
+    });
+  }
+
+  function refreshTitle(){
+    const el = $("#title-block h5");
+    if (!el) return;
+    el.textContent = elDesiredTitle.value || (state.currentN ? `My Top ${state.currentN} Fave!` : "My Playlist");
+  }
+
+  // ---- Template ----
   function generateTemplate(n){
     state.currentN = n;
     const title = elDesiredTitle.value || `My Top ${n} Fave!`;
@@ -132,6 +207,65 @@
           <span>Card style:</span>
           <select id="bodyThemeSelect" class="theme-select theme-select-inline"></select>
           <button class="gen-btn" id="btn-random-body" type="button">🎲</button>
+        </div>
+
+        <div class="ctrl-row">
+          <label class="toggle">
+            <input type="checkbox" id="customEnabled">
+            Enable Custom Colors
+          </label>
+          <button class="btn-ghost" id="btn-reset-custom" type="button">Reset Custom</button>
+        </div>
+
+        <div class="settings-grid" id="custom-grid">
+          <div class="ctrl">
+            <label>Title BG</label>
+            <input type="color" id="c_titleBg">
+          </div>
+          <div class="ctrl">
+            <label>Title Text</label>
+            <input type="color" id="c_titleText">
+          </div>
+
+          <div class="ctrl">
+            <label>Wrap BG</label>
+            <input type="color" id="c_wrapBg">
+          </div>
+
+          <div class="ctrl">
+            <label>Card BG</label>
+            <input type="color" id="c_cardBg">
+          </div>
+
+          <div class="ctrl">
+            <label>Card BG Opacity</label>
+            <input type="range" id="c_cardAlpha" min="0" max="100" value="4">
+          </div>
+
+          <div class="ctrl">
+            <label>Rank BG</label>
+            <input type="color" id="c_rankBg">
+          </div>
+
+          <div class="ctrl">
+            <label>Rank Text</label>
+            <input type="color" id="c_rankText">
+          </div>
+
+          <div class="ctrl">
+            <label>Song Text</label>
+            <input type="color" id="c_songText">
+          </div>
+
+          <div class="ctrl">
+            <label>Artist Text</label>
+            <input type="color" id="c_artistText">
+          </div>
+
+          <div class="ctrl">
+            <label>Artist Opacity</label>
+            <input type="range" id="c_artistAlpha" min="0" max="100" value="72">
+          </div>
         </div>
       </div>
 
@@ -154,6 +288,7 @@
     html += `</div>`;
     elTemplateResult.innerHTML = html;
 
+    // ---- Bind preset dropdowns ----
     const elTitleSelect = $("#titleThemeSelect");
     const elBodySelect  = $("#bodyThemeSelect");
 
@@ -165,32 +300,189 @@
 
     elTitleSelect.addEventListener("change", () => {
       const d = titleDesigns.find(x => x.name === elTitleSelect.value);
-      if (d) applyTitleStyle(d);
+      if (d) state.activeTitle = d;
+      applyTitleWithOverrides();
     });
 
     elBodySelect.addEventListener("change", () => {
       const d = bodyDesigns.find(x => x.name === elBodySelect.value);
-      if (d) applyBodyStyle(d);
+      if (d) state.activeBody = d;
+      applyBodyWithOverrides();
     });
 
     $("#btn-random-title").addEventListener("click", () => {
       const d = pick(titleDesigns);
+      state.activeTitle = d;
       elTitleSelect.value = d.name;
-      applyTitleStyle(d);
+      applyTitleWithOverrides();
     });
 
     $("#btn-random-body").addEventListener("click", () => {
       const d = pick(bodyDesigns);
+      state.activeBody = d;
       elBodySelect.value = d.name;
-      applyBodyStyle(d);
+      applyBodyWithOverrides();
     });
 
-    applyTitleStyle(state.activeTitle);
-    applyBodyStyle(state.activeBody);
+    // ---- Bind custom color controls ----
+    const elCustomEnabled = $("#customEnabled");
+    const btnResetCustom  = $("#btn-reset-custom");
+
+    const syncCustomDerived = () => {
+      // card bg from hex + alpha slider
+      state.custom.cardBg = rgbaFromHex(state.custom.cardBgHex, state.custom.cardBgAlpha);
+
+      // artist text from hex + alpha slider
+      state.custom.artistText = rgbaFromHex(state.custom.artistTextHex, state.custom.artistTextAlpha);
+    };
+
+    const setPicker = (id, value) => {
+      const el = $(id);
+      if (el) el.value = value;
+    };
+
+    const setRange = (id, value) => {
+      const el = $(id);
+      if (el) el.value = String(value);
+    };
+
+    // init UI from state
+    elCustomEnabled.checked = state.customEnabled;
+
+    setPicker("#c_titleBg", state.custom.titleBg);
+    setPicker("#c_titleText", state.custom.titleText);
+    setPicker("#c_wrapBg", state.custom.wrapBg);
+
+    setPicker("#c_cardBg", state.custom.cardBgHex);
+    setRange("#c_cardAlpha", Math.round(state.custom.cardBgAlpha * 100));
+
+    setPicker("#c_rankBg", state.custom.rankBg);
+    setPicker("#c_rankText", state.custom.rankText);
+
+    setPicker("#c_songText", state.custom.songText);
+
+    setPicker("#c_artistText", state.custom.artistTextHex);
+    setRange("#c_artistAlpha", Math.round(state.custom.artistTextAlpha * 100));
+
+    syncCustomDerived();
+
+    elCustomEnabled.addEventListener("change", () => {
+      state.customEnabled = elCustomEnabled.checked;
+      applyTitleWithOverrides();
+      applyBodyWithOverrides();
+    });
+
+    const onColor = (id, cb) => {
+      const el = $(id);
+      if (!el) return;
+      el.addEventListener("input", cb);
+    };
+    const onRange = (id, cb) => {
+      const el = $(id);
+      if (!el) return;
+      el.addEventListener("input", cb);
+    };
+
+    onColor("#c_titleBg", () => {
+      state.custom.titleBg = $("#c_titleBg").value;
+      applyTitleWithOverrides();
+    });
+
+    onColor("#c_titleText", () => {
+      state.custom.titleText = $("#c_titleText").value;
+      applyTitleWithOverrides();
+    });
+
+    onColor("#c_wrapBg", () => {
+      state.custom.wrapBg = $("#c_wrapBg").value;
+      applyBodyWithOverrides();
+    });
+
+    onColor("#c_cardBg", () => {
+      state.custom.cardBgHex = $("#c_cardBg").value;
+      syncCustomDerived();
+      applyBodyWithOverrides();
+    });
+
+    onRange("#c_cardAlpha", () => {
+      state.custom.cardBgAlpha = Number($("#c_cardAlpha").value) / 100;
+      syncCustomDerived();
+      applyBodyWithOverrides();
+    });
+
+    onColor("#c_rankBg", () => {
+      state.custom.rankBg = $("#c_rankBg").value;
+      applyBodyWithOverrides();
+    });
+
+    onColor("#c_rankText", () => {
+      state.custom.rankText = $("#c_rankText").value;
+      applyBodyWithOverrides();
+    });
+
+    onColor("#c_songText", () => {
+      state.custom.songText = $("#c_songText").value;
+      applyBodyWithOverrides();
+    });
+
+    onColor("#c_artistText", () => {
+      state.custom.artistTextHex = $("#c_artistText").value;
+      syncCustomDerived();
+      applyBodyWithOverrides();
+    });
+
+    onRange("#c_artistAlpha", () => {
+      state.custom.artistTextAlpha = Number($("#c_artistAlpha").value) / 100;
+      syncCustomDerived();
+      applyBodyWithOverrides();
+    });
+
+    btnResetCustom.addEventListener("click", () => {
+      state.customEnabled = false;
+      elCustomEnabled.checked = false;
+
+      state.custom = {
+        titleBg: "#0b1020",
+        titleText: "#eef2ff",
+        wrapBg: "#0b1020",
+        cardBgHex: "#ffffff",
+        cardBgAlpha: 0.04,
+        cardBg: "rgba(255,255,255,.04)",
+        rankBg: "#7c3aed",
+        rankText: "#ffffff",
+        songText: "#eef2ff",
+        artistTextHex: "#eef2ff",
+        artistTextAlpha: 0.72,
+        artistText: "rgba(238,242,255,.72)",
+      };
+
+      setPicker("#c_titleBg", state.custom.titleBg);
+      setPicker("#c_titleText", state.custom.titleText);
+      setPicker("#c_wrapBg", state.custom.wrapBg);
+
+      setPicker("#c_cardBg", state.custom.cardBgHex);
+      setRange("#c_cardAlpha", Math.round(state.custom.cardBgAlpha * 100));
+
+      setPicker("#c_rankBg", state.custom.rankBg);
+      setPicker("#c_rankText", state.custom.rankText);
+
+      setPicker("#c_songText", state.custom.songText);
+
+      setPicker("#c_artistText", state.custom.artistTextHex);
+      setRange("#c_artistAlpha", Math.round(state.custom.artistTextAlpha * 100));
+
+      applyTitleWithOverrides();
+      applyBodyWithOverrides();
+    });
+
+    // Apply initial styles
+    applyTitleWithOverrides();
+    applyBodyWithOverrides();
 
     elDownloadWrap.style.display = "flex";
   }
 
+  // ---- Download (PNG/JPG) ----
   function copyRelevantTextStyles(span, computed){
     const props = [
       "color","fontFamily","fontSize","fontWeight","fontStyle",
@@ -238,7 +530,8 @@
     });
 
     try{
-      // JPG needs solid background (use your locked page bg)
+      // For JPG: use solid background = Midnight Ink (or your custom wrap/page)
+      // Since body background is a solid color, this is safe.
       const bodyBG = window.getComputedStyle(document.body).backgroundColor || "#0b1020";
 
       const canvas = await html2canvas(target, {
