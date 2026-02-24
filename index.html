@@ -28,10 +28,7 @@
     </div>
 
     <div class="header-actions">
-      <span id="page-design-badge">—</span>
-      <button class="page-randomize-btn" id="btn-randomize-page" type="button">
-        <span class="spin">✦</span> Randomize Page
-      </button>
+      <span id="page-design-badge">Midnight Ink</span>
     </div>
   </header>
 
@@ -59,9 +56,23 @@
       </div>
 
       <div class="download-wrap" id="download-wrap" style="display:none;">
-        <button class="download-btn" id="download-btn" type="button">
-          <i class="bi bi-download"></i> Download Image
-        </button>
+        <div class="download-controls">
+          <div class="format-pill">
+            <span class="format-label">Export:</span>
+            <label class="format-option">
+              <input type="radio" name="exportFormat" value="png" checked>
+              PNG
+            </label>
+            <label class="format-option">
+              <input type="radio" name="exportFormat" value="jpg">
+              JPG
+            </label>
+          </div>
+
+          <button class="download-btn" id="download-btn" type="button">
+            <i class="bi bi-download"></i> Download
+          </button>
+        </div>
       </div>
     </section>
   </main>
