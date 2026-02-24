@@ -325,6 +325,14 @@ body{
   border-radius: 6px;
 }
 
+/* Hide custom controls until enabled */
+#custom-grid{
+  display: none;
+}
+#custom-grid.is-visible{
+  display: grid;
+}
+
 /* Used for download replacement spans */
 .capture-text{
   display:block;
