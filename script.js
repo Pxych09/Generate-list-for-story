@@ -58,7 +58,7 @@
     customEnabled: false,
     custom: {
       titleBg: "#0b1020",
-      titleBgTransparent: false, // NEW
+      titleBgTransparent: false,
       titleText: "#eef2ff",
       titleFont: "",
       titleAlign: "left",
@@ -66,6 +66,7 @@
       wrapBg: "#0b1020",
 
       wrapObject: "star",
+      wrapObjectCustomChar: "",        // NEW: user supplied ornament (e.g. 🚀)
       wrapObjectSize: 22,
       wrapObjectQty: 24,
       wrapObjectDistance: 24,
@@ -128,6 +129,18 @@
     return `rgba(${r},${g},${b},${a})`;
   }
 
+  // NEW: best-effort first grapheme (emoji-safe enough)
+  function firstGrapheme(s){
+    const v = String(s || "").trim();
+    if (!v) return "";
+    if (window.Intl && Intl.Segmenter){
+      const seg = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+      const it = seg.segment(v)[Symbol.iterator]().next();
+      return it?.value?.segment || "";
+    }
+    return Array.from(v)[0] || "";
+  }
+
   // ---- Google Fonts loader ----
   function extractFirstFontFamily(raw){
     const s = String(raw || "").trim();
@@ -166,6 +179,10 @@
 
   // ---- Ornaments ----
   function getOrnChar(){
+    // NEW: if user typed something, use it instead of dropdown
+    const customChar = firstGrapheme(state.custom.wrapObjectCustomChar);
+    if (state.customEnabled && customChar) return customChar;
+
     return ORNAMENTS.find(o => o.value === state.custom.wrapObject)?.char || "★";
   }
 
@@ -227,6 +244,7 @@
     wrap.style.display = "flex";
     wrap.style.flexDirection = "column";
     wrap.style.gap = d.gap;
+    wrap.style.bottom = "1em";
 
     wrap.querySelectorAll(".song-card").forEach(card => {
       card.style.background = d.cardBg;
@@ -319,7 +337,6 @@
     const h5 = $("h5", block);
     if (!h5) return;
 
-    // Title BG transparent toggle
     if (state.custom.titleBgTransparent) {
       block.style.background = "transparent";
     } else {
@@ -483,6 +500,10 @@
     const options = ORNAMENTS.map(o => ({label:o.label, value:o.value}));
     return `
       ${selectControl("Wrap BG Objects", "wrapObjSelect", options, state.custom.wrapObject)}
+
+      <!-- NEW: custom character input -->
+      ${textControl("Input a desired object instead", "wrapObjCustomChar", "e.g. 🚀", state.custom.wrapObjectCustomChar)}
+
       ${rangeControl("Object Size", "wrapObjSize", 8, 80, state.custom.wrapObjectSize)}
       <div class="ctrl">
         <div class="ctrl-head"><label>Quantity</label></div>
@@ -497,6 +518,88 @@
         <button class="small-btn" id="wrapObjAnimBtn" type="button">OFF</button>
       </div>
     `;
+  }
+
+  // ---- Helper: sync UI controls from state (for reset correctness) ----
+  function syncCustomControlsFromState(){
+    // checkboxes + selects + text
+    const elCustomEnabled = $("#customEnabled");
+    const elCustomGrid    = $("#custom-grid");
+    if (elCustomEnabled) elCustomEnabled.checked = !!state.customEnabled;
+    if (elCustomGrid) elCustomGrid.classList.toggle("is-visible", !!state.customEnabled);
+
+    const elTitleBgTransparent = $("#titleBgTransparentChk");
+    if (elTitleBgTransparent) elTitleBgTransparent.checked = !!state.custom.titleBgTransparent;
+
+    const elFont = $("#titleFontInput");
+    if (elFont) elFont.value = state.custom.titleFont || "";
+
+    const elAlign = $("#titleAlignSelect");
+    if (elAlign) elAlign.value = state.custom.titleAlign || "left";
+
+    // color pickers + hex
+    const setColor = (key, value) => {
+      const p = $(`#${key}_picker`);
+      const h = $(`#${key}_hex`);
+      if (p) p.value = value;
+      if (h){ h.value = value; h.style.borderColor = ""; }
+    };
+
+    setColor("c_titleBg", state.custom.titleBg);
+    setColor("c_titleText", state.custom.titleText);
+    setColor("c_wrapBg", state.custom.wrapBg);
+    setColor("c_cardBg", state.custom.cardBgHex);
+    setColor("c_rankBg", state.custom.rankBg);
+    setColor("c_rankText", state.custom.rankText);
+    setColor("c_songText", state.custom.songText);
+    setColor("c_artistText", state.custom.artistTextHex);
+
+    // ranges
+    const elCardAlpha = $("#c_cardAlpha_range");
+    if (elCardAlpha) elCardAlpha.value = String(Math.round(state.custom.cardBgAlpha * 100));
+
+    const elArtistAlpha = $("#c_artistAlpha_range");
+    if (elArtistAlpha) elArtistAlpha.value = String(Math.round(state.custom.artistTextAlpha * 100));
+
+    // wrap controls
+    const elObjSelect = $("#wrapObjSelect");
+    if (elObjSelect) elObjSelect.value = state.custom.wrapObject;
+
+    const elObjCustom = $("#wrapObjCustomChar");
+    if (elObjCustom) elObjCustom.value = state.custom.wrapObjectCustomChar || "";
+
+    const elObjSize = $("#wrapObjSize_range");
+    if (elObjSize) elObjSize.value = String(state.custom.wrapObjectSize);
+
+    const elObjQty = $("#wrapObjQty");
+    if (elObjQty) elObjQty.value = String(state.custom.wrapObjectQty);
+
+    const elObjDist = $("#wrapObjDist_range");
+    if (elObjDist) elObjDist.value = String(state.custom.wrapObjectDistance);
+
+    // glow radio
+    const glowRadios = document.querySelectorAll('input[name="wrapGlow"]');
+    glowRadios.forEach(r => {
+      r.checked = (state.custom.wrapGlow ? "on" : "off") === r.value;
+    });
+
+    // animate button
+    const elAnimBtn = $("#wrapObjAnimBtn");
+    if (elAnimBtn){
+      elAnimBtn.textContent = state.custom.wrapAnimate ? "ON" : "OFF";
+      elAnimBtn.classList.toggle("is-on", !!state.custom.wrapAnimate);
+    }
+
+    // title bg input disabled state
+    const titleBgPicker = $("#c_titleBg_picker");
+    const titleBgHex = $("#c_titleBg_hex");
+    if (titleBgPicker && titleBgHex){
+      const disabled = !!state.custom.titleBgTransparent;
+      titleBgPicker.disabled = disabled;
+      titleBgHex.disabled = disabled;
+      titleBgPicker.style.opacity = disabled ? "0.4" : "1";
+      titleBgHex.style.opacity = disabled ? "0.4" : "1";
+    }
   }
 
   // ---- Template ----
@@ -563,7 +666,7 @@
         </div>
       </div>
 
-      <div id="cards-wrap">
+      <div id="cards-wrap" class="position-sticky">
         <div id="wrap-ornaments" aria-hidden="true"></div>
         <div id="title-block"><h5>${escapeHTML(title)}</h5></div>
     `;
@@ -655,10 +758,10 @@
 
       const syncTitleBgUI = () => {
         const disabled = state.custom.titleBgTransparent;
-        titleBgPicker.disabled = disabled;
-        titleBgHex.disabled = disabled;
-        titleBgPicker.style.opacity = disabled ? "0.4" : "1";
-        titleBgHex.style.opacity = disabled ? "0.4" : "1";
+        if (titleBgPicker) titleBgPicker.disabled = disabled;
+        if (titleBgHex) titleBgHex.disabled = disabled;
+        if (titleBgPicker) titleBgPicker.style.opacity = disabled ? "0.4" : "1";
+        if (titleBgHex) titleBgHex.style.opacity = disabled ? "0.4" : "1";
       };
 
       syncTitleBgUI();
@@ -762,6 +865,7 @@
 
     // ---- Wrap BG controls ----
     const elObjSelect = $("#wrapObjSelect");
+    const elObjCustom = $("#wrapObjCustomChar"); // NEW
     const elObjSize   = $("#wrapObjSize_range");
     const elObjQty    = $("#wrapObjQty");
     const elObjDist   = $("#wrapObjDist_range");
@@ -771,6 +875,15 @@
       elObjSelect.value = state.custom.wrapObject;
       elObjSelect.addEventListener("change", () => {
         state.custom.wrapObject = elObjSelect.value;
+        applyBodyWithOverrides();
+      });
+    }
+
+    // NEW: custom char input overrides dropdown when non-empty
+    if (elObjCustom){
+      elObjCustom.value = state.custom.wrapObjectCustomChar || "";
+      elObjCustom.addEventListener("input", () => {
+        state.custom.wrapObjectCustomChar = elObjCustom.value;
         applyBodyWithOverrides();
       });
     }
@@ -826,14 +939,13 @@
       });
     }
 
-    // reset
+    // reset (UPDATED: resets state + UI controls)
     btnResetCustom.addEventListener("click", () => {
       state.customEnabled = false;
-      elCustomEnabled.checked = false;
 
       state.custom = {
         titleBg: "#0b1020",
-        titleBgTransparent: false, // NEW
+        titleBgTransparent: false,
         titleText: "#eef2ff",
         titleFont: "",
         titleAlign: "left",
@@ -841,6 +953,7 @@
         wrapBg: "#0b1020",
 
         wrapObject: "star",
+        wrapObjectCustomChar: "",   // NEW reset
         wrapObjectSize: 22,
         wrapObjectQty: 24,
         wrapObjectDistance: 24,
@@ -859,13 +972,13 @@
       };
 
       syncCustomDerived();
-      syncCustomGridVisibility();
+      syncCustomControlsFromState(); // IMPORTANT: resets the UI inputs too
 
       applyTitleWithOverrides();
       applyBodyWithOverrides();
     });
 
-    // Apply initial styles
+    // Apply initial styles + show download
     applyTitleWithOverrides();
     applyBodyWithOverrides();
 
