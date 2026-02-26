@@ -17,6 +17,10 @@
   <!-- html2canvas -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
+  <!-- gif.js (for GIF export) -->
+  <script src="https://cdn.jsdelivr.net/npm/gif.js.optimized/dist/gif.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gif.js.optimized/dist/gif.worker.js"></script>
+
   <link rel="stylesheet" href="./style.css" />
 </head>
 
@@ -68,6 +72,10 @@
               <input type="radio" name="exportFormat" value="jpg">
               JPG
             </label>
+            <label class="format-option">
+              <input type="radio" name="exportFormat" value="gif">
+              GIF
+            </label>
           </div>
 
           <button class="download-btn" id="download-btn" type="button">
@@ -76,6 +84,21 @@
         </div>
       </div>
     </section>
+
+    <article class="border-top border-bottom py-2 d-flex justify-content-center align-items-center">
+      <div class="container">
+        You can check this website <a href="https://fonts.google.com/" target="_blank">Google Fonts</a> as you reference for "Fonts".
+      </div>
+    </article>
+    <article class="border-top border-bottom py-2 d-flex justify-content-center align-items-center">
+      <div class="container">
+        This web page is developed by <em><a href="#" class="text-decoration-none">@cheem_well</a></em> and with the help of <em>ChatGPT</em>.
+      </div>
+    </article>
+    <footer class="p-2 d-flex justify-content-center align-items-center">
+      <pre>All rights reserved &copy;2026.</pre>
+    </footer>
+
 
   </main>
 
