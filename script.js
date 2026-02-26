@@ -66,7 +66,7 @@
       wrapBg: "#0b1020",
 
       wrapObject: "star",
-      wrapObjectCustomChar: "",        // NEW: user supplied ornament (e.g. 🚀)
+      wrapObjectCustomChar: "",
       wrapObjectSize: 22,
       wrapObjectQty: 24,
       wrapObjectDistance: 24,
@@ -76,15 +76,19 @@
       cardBgHex: "#ffffff",
       cardBgAlpha: 0.04,
       cardBg: "rgba(255,255,255,.04)",
+      cardBorderOff: false,
 
       rankBg: "#7c3aed",
       rankText: "#ffffff",
+      rankFont: "",
 
       songText: "#eef2ff",
+      songFont: "",
 
       artistTextHex: "#eef2ff",
       artistTextAlpha: 0.72,
       artistText: "rgba(238,242,255,.72)",
+      artistFont: "",
     }
   };
 
@@ -129,7 +133,6 @@
     return `rgba(${r},${g},${b},${a})`;
   }
 
-  // NEW: best-effort first grapheme (emoji-safe enough)
   function firstGrapheme(s){
     const v = String(s || "").trim();
     if (!v) return "";
@@ -177,12 +180,18 @@
   }
   const debouncedFontLoad = debounce((val) => ensureGoogleFontLoaded(val), 350);
 
+  function applyFontToElement(el, raw){
+    if (!el) return;
+    const v = String(raw || "").trim();
+    if (!v) return;
+    const hasCommaOrQuote = /['",]/.test(v);
+    el.style.fontFamily = hasCommaOrQuote ? v : `'${v}', sans-serif`;
+  }
+
   // ---- Ornaments ----
   function getOrnChar(){
-    // NEW: if user typed something, use it instead of dropdown
     const customChar = firstGrapheme(state.custom.wrapObjectCustomChar);
     if (state.customEnabled && customChar) return customChar;
-
     return ORNAMENTS.find(o => o.value === state.custom.wrapObject)?.char || "★";
   }
 
@@ -240,10 +249,15 @@
 
     wrap.style.background = d.wrapBg;
     wrap.style.padding = d.padding;
-    wrap.style.borderRadius = d.borderRadius;
+
+    // FIX: "none" is invalid for border-radius — use 0 or a real value
+    wrap.style.borderRadius = "0";
+
     wrap.style.display = "flex";
     wrap.style.flexDirection = "column";
     wrap.style.gap = d.gap;
+
+    // FIX: sticky doesn't use bottom; keep spacing via margin if needed
     wrap.style.bottom = "1em";
 
     wrap.querySelectorAll(".song-card").forEach(card => {
@@ -255,8 +269,10 @@
       card.style.borderBottom = d.cardBorderBottom || "none";
 
       const rank = $(".rank-badge", card);
-      rank.style.background = d.rankBg;
-      rank.style.color = d.rankColor;
+      if (rank){
+        rank.style.background = d.rankBg;
+        rank.style.color = d.rankColor;
+      }
 
       const inputs = card.querySelectorAll("input");
       if (inputs[0]) inputs[0].style.color = d.textColor;
@@ -337,12 +353,7 @@
     const h5 = $("h5", block);
     if (!h5) return;
 
-    if (state.custom.titleBgTransparent) {
-      block.style.background = "transparent";
-    } else {
-      block.style.background = state.custom.titleBg;
-    }
-
+    block.style.background = state.custom.titleBgTransparent ? "transparent" : state.custom.titleBg;
     h5.style.color = state.custom.titleText;
 
     const raw = String(state.custom.titleFont || "").trim();
@@ -366,16 +377,28 @@
 
       wrap.querySelectorAll(".song-card").forEach(card => {
         card.style.background = state.custom.cardBg;
+        
+        if (state.custom.cardBorderOff){
+          card.style.outline = "none";
+          card.style.borderBottom = "none";
+        }
 
         const rank = $(".rank-badge", card);
         if (rank){
           rank.style.background = state.custom.rankBg;
           rank.style.color = state.custom.rankText;
+          applyFontToElement(rank, state.custom.rankFont);
         }
 
         const inputs = card.querySelectorAll("input");
-        if (inputs[0]) inputs[0].style.color = state.custom.songText;
-        if (inputs[1]) inputs[1].style.color = state.custom.artistText;
+        if (inputs[0]){
+          inputs[0].style.color = state.custom.songText;
+          applyFontToElement(inputs[0], state.custom.songFont);
+        }
+        if (inputs[1]){
+          inputs[1].style.color = state.custom.artistText;
+          applyFontToElement(inputs[1], state.custom.artistFont);
+        }
       });
     }
 
@@ -386,6 +409,37 @@
     const el = $("#title-block h5");
     if (!el) return;
     el.textContent = elDesiredTitle.value || (state.currentN ? `My Top ${state.currentN} Fave!` : "My Playlist");
+  }
+
+  // ---- Preserve values when regenerating ----
+  function snapshotCurrentInputs(){
+    const wrap = $("#cards-wrap");
+    if (!wrap) return null;
+
+    const title = $("#title-block h5")?.textContent || "";
+    const rows = Array.from(wrap.querySelectorAll(".song-card")).map(card => {
+      const inputs = card.querySelectorAll("input");
+      return {
+        song: inputs[0]?.value ?? "",
+        artist: inputs[1]?.value ?? ""
+      };
+    });
+
+    return { title, rows };
+  }
+
+  function restoreInputs(snapshot){
+    if (!snapshot) return;
+    const wrap = $("#cards-wrap");
+    if (!wrap) return;
+
+    const inputs = wrap.querySelectorAll(".song-card input");
+    for (let i = 0; i < snapshot.rows.length; i++){
+      const songInp = inputs[i*2];
+      const artistInp = inputs[i*2 + 1];
+      if (songInp) songInp.value = snapshot.rows[i].song || songInp.value;
+      if (artistInp) artistInp.value = snapshot.rows[i].artist || artistInp.value;
+    }
   }
 
   // ---- Custom color binding ----
@@ -500,10 +554,7 @@
     const options = ORNAMENTS.map(o => ({label:o.label, value:o.value}));
     return `
       ${selectControl("Wrap BG Objects", "wrapObjSelect", options, state.custom.wrapObject)}
-
-      <!-- NEW: custom character input -->
       ${textControl("Input a desired object instead", "wrapObjCustomChar", "e.g. 🚀", state.custom.wrapObjectCustomChar)}
-
       ${rangeControl("Object Size", "wrapObjSize", 8, 80, state.custom.wrapObjectSize)}
       <div class="ctrl">
         <div class="ctrl-head"><label>Quantity</label></div>
@@ -522,9 +573,10 @@
 
   // ---- Helper: sync UI controls from state (for reset correctness) ----
   function syncCustomControlsFromState(){
-    // checkboxes + selects + text
     const elCustomEnabled = $("#customEnabled");
     const elCustomGrid    = $("#custom-grid");
+    const elCardBorderOff = $("#cardBorderOffChk");
+    if (elCardBorderOff) elCardBorderOff.checked = !!state.custom.cardBorderOff;
     if (elCustomEnabled) elCustomEnabled.checked = !!state.customEnabled;
     if (elCustomGrid) elCustomGrid.classList.toggle("is-visible", !!state.customEnabled);
 
@@ -536,6 +588,16 @@
 
     const elAlign = $("#titleAlignSelect");
     if (elAlign) elAlign.value = state.custom.titleAlign || "left";
+
+    // NEW: font inputs
+    const elSongFont = $("#songFontInput");
+    if (elSongFont) elSongFont.value = state.custom.songFont || "";
+
+    const elArtistFont = $("#artistFontInput");
+    if (elArtistFont) elArtistFont.value = state.custom.artistFont || "";
+
+    const elRankFont = $("#rankFontInput");
+    if (elRankFont) elRankFont.value = state.custom.rankFont || "";
 
     // color pickers + hex
     const setColor = (key, value) => {
@@ -603,7 +665,7 @@
   }
 
   // ---- Template ----
-  function generateTemplate(n){
+  function generateTemplate(n, snapshot = null){
     state.currentN = n;
     const title = elDesiredTitle.value || `My Top ${n} Fave!`;
 
@@ -655,13 +717,22 @@
 
           ${colorControl("Card BG", "c_cardBg")}
           ${rangeControl("Card BG Opacity", "c_cardAlpha", 0, 100, Math.round(state.custom.cardBgAlpha * 100))}
+          <div class="ctrl">
+            <label class="toggle">
+              <input type="checkbox" id="cardBorderOffChk">
+              Disable borderline in Card BG instead
+            </label>
+          </div>
 
           ${colorControl("Rank BG", "c_rankBg")}
           ${colorControl("Rank Text", "c_rankText")}
+          ${textControl("Rank Font Style", "rankFontInput", "e.g. Poppins", state.custom.rankFont)}
 
           ${colorControl("Song Text", "c_songText")}
+          ${textControl("Song Font Style", "songFontInput", "e.g. Space Mono", state.custom.songFont)}
 
           ${colorControl("Artist Text", "c_artistText")}
+          ${textControl("Artist Font Style", "artistFontInput", "e.g. Playfair Display", state.custom.artistFont)}
           ${rangeControl("Artist Opacity", "c_artistAlpha", 0, 100, Math.round(state.custom.artistTextAlpha * 100))}
         </div>
       </div>
@@ -685,6 +756,9 @@
 
     html += `</div>`;
     elTemplateResult.innerHTML = html;
+
+    // restore typed values
+    restoreInputs(snapshot);
 
     // ---- Bind preset dropdowns ----
     const elTitleSelect = $("#titleThemeSelect");
@@ -740,8 +814,11 @@
       syncCustomGridVisibility();
       syncCustomDerived();
 
-      if (state.customEnabled && state.custom.titleFont) {
-        ensureGoogleFontLoaded(state.custom.titleFont);
+      if (state.customEnabled){
+        if (state.custom.titleFont) ensureGoogleFontLoaded(state.custom.titleFont);
+        if (state.custom.songFont) ensureGoogleFontLoaded(state.custom.songFont);
+        if (state.custom.artistFont) ensureGoogleFontLoaded(state.custom.artistFont);
+        if (state.custom.rankFont) ensureGoogleFontLoaded(state.custom.rankFont);
       }
 
       applyTitleWithOverrides();
@@ -773,6 +850,15 @@
       });
     }
 
+    const elCardBorderOff = $("#cardBorderOffChk");
+    if (elCardBorderOff){
+      elCardBorderOff.checked = !!state.custom.cardBorderOff;
+      elCardBorderOff.addEventListener("change", () => {
+        state.custom.cardBorderOff = elCardBorderOff.checked;
+        applyBodyWithOverrides();
+      });
+    }
+
     // ---- Bind Title Text font + align ----
     const elFont = $("#titleFontInput");
     if (elFont){
@@ -790,6 +876,37 @@
       elAlign.addEventListener("change", () => {
         state.custom.titleAlign = elAlign.value;
         applyTitleWithOverrides();
+      });
+    }
+
+    // ---- NEW: bind Song/Artist/Rank font inputs ----
+    const elSongFont = $("#songFontInput");
+    if (elSongFont){
+      elSongFont.value = state.custom.songFont || "";
+      elSongFont.addEventListener("input", () => {
+        state.custom.songFont = elSongFont.value;
+        debouncedFontLoad(elSongFont.value);
+        applyBodyWithOverrides();
+      });
+    }
+
+    const elArtistFont = $("#artistFontInput");
+    if (elArtistFont){
+      elArtistFont.value = state.custom.artistFont || "";
+      elArtistFont.addEventListener("input", () => {
+        state.custom.artistFont = elArtistFont.value;
+        debouncedFontLoad(elArtistFont.value);
+        applyBodyWithOverrides();
+      });
+    }
+
+    const elRankFont = $("#rankFontInput");
+    if (elRankFont){
+      elRankFont.value = state.custom.rankFont || "";
+      elRankFont.addEventListener("input", () => {
+        state.custom.rankFont = elRankFont.value;
+        debouncedFontLoad(elRankFont.value);
+        applyBodyWithOverrides();
       });
     }
 
@@ -865,7 +982,7 @@
 
     // ---- Wrap BG controls ----
     const elObjSelect = $("#wrapObjSelect");
-    const elObjCustom = $("#wrapObjCustomChar"); // NEW
+    const elObjCustom = $("#wrapObjCustomChar");
     const elObjSize   = $("#wrapObjSize_range");
     const elObjQty    = $("#wrapObjQty");
     const elObjDist   = $("#wrapObjDist_range");
@@ -879,7 +996,6 @@
       });
     }
 
-    // NEW: custom char input overrides dropdown when non-empty
     if (elObjCustom){
       elObjCustom.value = state.custom.wrapObjectCustomChar || "";
       elObjCustom.addEventListener("input", () => {
@@ -915,7 +1031,6 @@
       });
     }
 
-    // glow radio
     const glowRadios = document.querySelectorAll('input[name="wrapGlow"]');
     glowRadios.forEach(r => {
       r.addEventListener("change", () => {
@@ -953,7 +1068,7 @@
         wrapBg: "#0b1020",
 
         wrapObject: "star",
-        wrapObjectCustomChar: "",   // NEW reset
+        wrapObjectCustomChar: "",
         wrapObjectSize: 22,
         wrapObjectQty: 24,
         wrapObjectDistance: 24,
@@ -963,16 +1078,23 @@
         cardBgHex: "#ffffff",
         cardBgAlpha: 0.04,
         cardBg: "rgba(255,255,255,.04)",
+        cardBorderOff: false,
+
         rankBg: "#7c3aed",
         rankText: "#ffffff",
+        rankFont: "",
+
         songText: "#eef2ff",
+        songFont: "",
+
         artistTextHex: "#eef2ff",
         artistTextAlpha: 0.72,
         artistText: "rgba(238,242,255,.72)",
+        artistFont: "",
       };
 
       syncCustomDerived();
-      syncCustomControlsFromState(); // IMPORTANT: resets the UI inputs too
+      syncCustomControlsFromState();
 
       applyTitleWithOverrides();
       applyBodyWithOverrides();
@@ -985,7 +1107,7 @@
     elDownloadWrap.style.display = "flex";
   }
 
-  // ---- Download (PNG/JPG) ----
+  // ---- Download helpers (PNG/JPG/GIF) ----
   function copyRelevantTextStyles(span, computed){
     const props = [
       "color","fontFamily","fontSize","fontWeight","fontStyle",
@@ -1000,19 +1122,21 @@
 
   function getExportFormat(){
     const checked = document.querySelector('input[name="exportFormat"]:checked');
-    return checked?.value === "jpg" ? "jpg" : "png";
+    const v = checked?.value;
+    if (v === "jpg") return "jpg";
+    if (v === "gif") return "gif";
+    return "png";
   }
 
-  async function downloadImage(){
-    const target = $("#cards-wrap");
-    if (!target) return;
+  function safeFilename(){
+    return (elDesiredTitle.value || `my-top-${state.currentN}`)
+      .trim()
+      .replace(/\s+/g,"-")
+      .replace(/[^a-zA-Z0-9\-_]/g, "")
+      .toLowerCase() || "my-playlist";
+  }
 
-    const format = getExportFormat();
-    const isJpg = format === "jpg";
-
-    elDownloadBtn.classList.add("loading");
-    elDownloadBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Capturing...';
-
+  function replaceInputsForCapture(target){
     const inputs = target.querySelectorAll("input");
     const replacements = [];
 
@@ -1031,49 +1155,135 @@
       replacements.push({ inp, span });
     });
 
-    try{
-      const bodyBG = window.getComputedStyle(document.body).backgroundColor || "#0b1020";
-
-      const canvas = await html2canvas(target, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: isJpg ? bodyBG : null,
-      });
-
+    return () => {
       replacements.forEach(({ inp, span }) => {
         span.remove();
         inp.style.display = "";
       });
+    };
+  }
 
-      const safeName = (elDesiredTitle.value || `my-top-${state.currentN}`)
-        .trim()
-        .replace(/\s+/g,"-")
-        .toLowerCase() || "my-playlist";
+  async function captureCanvas(target, { isJpg, scale = 2 }){
+    const bodyBG = window.getComputedStyle(document.body).backgroundColor || "#0b1020";
+    return html2canvas(target, {
+      scale,
+      useCORS: true,
+      logging: false,
+      backgroundColor: isJpg ? bodyBG : null,
+    });
+  }
+
+  async function downloadPNGorJPG(format){
+    const target = $("#cards-wrap");
+    if (!target) return;
+
+    const isJpg = format === "jpg";
+
+    elDownloadBtn.classList.add("loading");
+    elDownloadBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Capturing...';
+
+    const restore = replaceInputsForCapture(target);
+
+    try{
+      const canvas = await captureCanvas(target, { isJpg, scale: 2 });
 
       const link = document.createElement("a");
-      link.download = `${safeName}.${format}`;
+      link.download = `${safeFilename()}.${format}`;
       link.href = isJpg ? canvas.toDataURL("image/jpeg", 0.95) : canvas.toDataURL("image/png");
       link.click();
     } catch (err){
-      console.error("Screenshot failed:", err);
-      replacements.forEach(({ inp, span }) => {
-        span.remove();
-        inp.style.display = "";
-      });
+      console.error("Capture failed:", err);
     } finally {
+      restore();
       elDownloadBtn.classList.remove("loading");
       elDownloadBtn.innerHTML = '<i class="bi bi-download"></i> Download';
     }
   }
 
+  async function downloadGIF(){
+    const target = $("#cards-wrap");
+    if (!target) return;
+
+    if (typeof window.GIF !== "function"){
+      console.error("GIF library not found. Make sure gif.js is included.");
+      return;
+    }
+
+    const frames = 18;
+    const delayMs = 70;
+    const scale = 2;
+
+    elDownloadBtn.classList.add("loading");
+    elDownloadBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Rendering GIF...';
+
+    const restore = replaceInputsForCapture(target);
+
+    try{
+      const bodyBG = window.getComputedStyle(document.body).backgroundColor || "#0b1020";
+
+      const gif = new window.GIF({
+        workers: 2,
+        quality: 10,
+        workerScript: "https://cdn.jsdelivr.net/npm/gif.js.optimized/dist/gif.worker.js",
+        background: bodyBG,
+        width: Math.round(target.clientWidth * scale),
+        height: Math.round(target.clientHeight * scale),
+      });
+
+      for (let i = 0; i < frames; i++){
+        await new Promise(r => setTimeout(r, delayMs));
+
+        const canvas = await html2canvas(target, {
+          scale,
+          useCORS: true,
+          logging: false,
+          backgroundColor: bodyBG,
+        });
+
+        gif.addFrame(canvas, { delay: delayMs, copy: true });
+      }
+
+      const blob = await new Promise((resolve) => {
+        gif.on("finished", resolve);
+        gif.render();
+      });
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.download = `${safeFilename()}.gif`;
+      link.href = url;
+      link.click();
+
+      setTimeout(() => URL.revokeObjectURL(url), 2500);
+    } catch (err){
+      console.error("GIF render failed:", err);
+    } finally {
+      restore();
+      elDownloadBtn.classList.remove("loading");
+      elDownloadBtn.innerHTML = '<i class="bi bi-download"></i> Download';
+    }
+  }
+
+  async function downloadImage(){
+    const format = getExportFormat();
+    if (format === "gif") return downloadGIF();
+    return downloadPNGorJPG(format);
+  }
+
   // ---- Events ----
   elDesiredTitle.addEventListener("input", refreshTitle);
 
-  elNumberOfSong.addEventListener("change", () => {
+  // Better UX: use input + debounce + preserve typed song titles/artists
+  const debouncedGenerate = debounce(() => {
     const val = Number(elNumberOfSong.value);
-    if (!Number.isNaN(val) && val >= 1) generateTemplate(Math.min(val, 50));
-  });
+    if (Number.isNaN(val) || val < 1) return;
+
+    const n = Math.min(val, 50);
+    const snap = snapshotCurrentInputs();
+    generateTemplate(n, snap);
+  }, 180);
+
+  elNumberOfSong.addEventListener("input", debouncedGenerate);
 
   elDownloadBtn.addEventListener("click", downloadImage);
 
