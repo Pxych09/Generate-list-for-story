@@ -1200,6 +1200,82 @@
     }
   }
 
+  function parsePx(v){
+  const n = parseFloat(String(v || "").replace("px",""));
+  return Number.isFinite(n) ? n : 0;
+}
+
+function parseDeg(v){
+  const n = parseFloat(String(v || "").replace("deg",""));
+  return Number.isFinite(n) ? n : 0;
+}
+
+function getOrnFloat(el, name, fallback){
+  const v = el.style.getPropertyValue(name);
+  const n = parseFloat(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function ensureOrnamentPhases(){
+  const layer = $("#wrap-ornaments");
+  if (!layer) return;
+  layer.querySelectorAll(".orn").forEach((orn, i) => {
+    if (!orn.dataset.ph){
+      orn.dataset.ph = String(rand(0, Math.PI * 2));
+    }
+  });
+}
+
+// Manually “animate” ornaments for a specific time (seconds)
+function setOrnamentsManualFrame(tSec){
+  const layer = $("#wrap-ornaments");
+  if (!layer) return;
+
+  const orns = layer.querySelectorAll(".orn");
+  orns.forEach((orn) => {
+    // read the CSS vars you already set
+    const dx = parsePx(orn.style.getPropertyValue("--orn-dx")) || 10;
+    const dy = parsePx(orn.style.getPropertyValue("--orn-dy")) || -12;
+    const rot = parseDeg(orn.style.getPropertyValue("--orn-rot")) || 0;
+    const speed = parseFloat(orn.style.getPropertyValue("--orn-speed")) || 6;
+
+    const phase = parseFloat(orn.dataset.ph || "0") || 0;
+
+    // match your floaty vibe (sinusoidal drift)
+    const w = (2 * Math.PI) / Math.max(0.1, speed);
+    const s = Math.sin(w * tSec + phase);
+    const c = Math.cos(w * tSec + phase);
+
+    const tx = dx * s;
+    const ty = dy * c;
+    const r  = rot + 10 * s;
+
+    orn.style.transform = `translate3d(${tx}px, ${ty}px, 0) rotate(${r}deg)`;
+  });
+}
+
+// Save/restore ornament animation state so we don’t break normal UI
+function setOrnamentsCaptureMode(isCapturing){
+  const layer = $("#wrap-ornaments");
+  if (!layer) return;
+
+  if (isCapturing){
+    layer.dataset.prevAnimated = layer.classList.contains("is-animated") ? "1" : "0";
+    // turn OFF css animation while capturing (we'll drive transforms ourselves)
+    layer.classList.remove("is-animated");
+    ensureOrnamentPhases();
+  } else {
+    // clear manual transforms
+    layer.querySelectorAll(".orn").forEach(orn => {
+      orn.style.transform = "";
+    });
+    if (layer.dataset.prevAnimated === "1"){
+      layer.classList.add("is-animated");
+    }
+    delete layer.dataset.prevAnimated;
+  }
+}
+
   async function downloadGIF(){
     const target = $("#cards-wrap");
     if (!target) return;
@@ -1209,15 +1285,16 @@
       return;
     }
 
-    const frames = 18;
-    const delayMs = 70;
+    const frames = 40;
+    const delayMs = 50;
     const scale = 2;
 
     elDownloadBtn.classList.add("loading");
     elDownloadBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Rendering GIF...';
 
     const restore = replaceInputsForCapture(target);
-
+    
+    setOrnamentsCaptureMode(true);
     try{
       const bodyBG = window.getComputedStyle(document.body).backgroundColor || "#0b1020";
 
@@ -1233,12 +1310,14 @@
 
       for (let i = 0; i < frames; i++){
         await new Promise(r => setTimeout(r, delayMs));
-
+        
+        setOrnamentsManualFrame((i * delayMs) / 1000);
         const canvas = await html2canvas(target, {
           scale,
           useCORS: true,
           logging: false,
           backgroundColor: bodyBG,
+          
         });
 
         gif.addFrame(canvas, { delay: delayMs, copy: true });
@@ -1260,6 +1339,7 @@
       console.error("GIF render failed:", err);
     } finally {
       restore();
+      setOrnamentsCaptureMode(false);
       elDownloadBtn.classList.remove("loading");
       elDownloadBtn.innerHTML = '<i class="bi bi-download"></i> Download';
     }
