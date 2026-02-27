@@ -80,6 +80,7 @@
 
       rankBg: "#7c3aed",
       rankText: "#ffffff",
+      rankBgTransparent: false,
       rankFont: "",
 
       songText: "#eef2ff",
@@ -385,7 +386,10 @@
 
         const rank = $(".rank-badge", card);
         if (rank){
-          rank.style.background = state.custom.rankBg;
+          rank.style.background = state.custom.rankBgTransparent
+            ? "transparent"
+            : state.custom.rankBg;
+
           rank.style.color = state.custom.rankText;
           applyFontToElement(rank, state.custom.rankFont);
         }
@@ -580,6 +584,10 @@
     if (elCustomEnabled) elCustomEnabled.checked = !!state.customEnabled;
     if (elCustomGrid) elCustomGrid.classList.toggle("is-visible", !!state.customEnabled);
 
+    const elRankBgTransparent = $("#rankBgTransparentChk");
+    if (elRankBgTransparent)
+      elRankBgTransparent.checked = !!state.custom.rankBgTransparent;
+
     const elTitleBgTransparent = $("#titleBgTransparentChk");
     if (elTitleBgTransparent) elTitleBgTransparent.checked = !!state.custom.titleBgTransparent;
 
@@ -663,6 +671,16 @@
       titleBgHex.style.opacity = disabled ? "0.4" : "1";
     }
   }
+  
+  const rankBgPicker = $("#c_rankBg_picker");
+  const rankBgHex = $("#c_rankBg_hex");
+  if (rankBgPicker && rankBgHex){
+    const disabled = !!state.custom.rankBgTransparent;
+    rankBgPicker.disabled = disabled;
+    rankBgHex.disabled = disabled;
+    rankBgPicker.style.opacity = disabled ? "0.4" : "1";
+    rankBgHex.style.opacity = disabled ? "0.4" : "1";
+  }
 
   // ---- Template ----
   function generateTemplate(n, snapshot = null){
@@ -727,6 +745,14 @@
           ${colorControl("Rank BG", "c_rankBg")}
           ${colorControl("Rank Text", "c_rankText")}
           ${textControl("Rank Font Style", "rankFontInput", "e.g. Poppins", state.custom.rankFont)}
+          ${colorControl("Rank BG", "c_rankBg")}
+          <div class="ctrl">
+            <label class="toggle">
+              <input type="checkbox" id="rankBgTransparentChk">
+              Set this to transparent instead
+            </label>
+          </div>
+
 
           ${colorControl("Song Text", "c_songText")}
           ${textControl("Song Font Style", "songFontInput", "e.g. Space Mono", state.custom.songFont)}
@@ -886,6 +912,30 @@
       elSongFont.addEventListener("input", () => {
         state.custom.songFont = elSongFont.value;
         debouncedFontLoad(elSongFont.value);
+        applyBodyWithOverrides();
+      });
+    }
+
+    const elRankBgTransparent = $("#rankBgTransparentChk");
+    const rankBgPicker = $("#c_rankBg_picker");
+    const rankBgHex = $("#c_rankBg_hex");
+
+    if (elRankBgTransparent){
+      elRankBgTransparent.checked = !!state.custom.rankBgTransparent;
+
+      const syncRankBgUI = () => {
+        const disabled = state.custom.rankBgTransparent;
+        if (rankBgPicker) rankBgPicker.disabled = disabled;
+        if (rankBgHex) rankBgHex.disabled = disabled;
+        if (rankBgPicker) rankBgPicker.style.opacity = disabled ? "0.4" : "1";
+        if (rankBgHex) rankBgHex.style.opacity = disabled ? "0.4" : "1";
+      };
+
+      syncRankBgUI();
+
+      elRankBgTransparent.addEventListener("change", () => {
+        state.custom.rankBgTransparent = elRankBgTransparent.checked;
+        syncRankBgUI();
         applyBodyWithOverrides();
       });
     }
@@ -1082,6 +1132,7 @@
 
         rankBg: "#7c3aed",
         rankText: "#ffffff",
+        rankBgTransparent: false,
         rankFont: "",
 
         songText: "#eef2ff",
