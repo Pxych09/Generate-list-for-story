@@ -1224,7 +1224,8 @@
       const gif = new window.GIF({
         workers: 2,
         quality: 10,
-        workerScript: "https://cdn.jsdelivr.net/npm/gif.js.optimized/dist/gif.worker.js",
+        //workerScript: "https://cdn.jsdelivr.net/npm/gif.js.optimized/dist/gif.worker.js",
+        workerScript: "/gif.worker.js",
         background: bodyBG,
         width: Math.round(target.clientWidth * scale),
         height: Math.round(target.clientHeight * scale),
